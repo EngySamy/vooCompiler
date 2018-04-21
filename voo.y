@@ -1,6 +1,14 @@
 %{
 #include <cstdio>
 #include <iostream>
+#include <math.h>
+#include <stdarg.h>
+#include "symTab.h"
+#include <string.h>
+#include <fstream>
+#include <stdio.h>
+#include <stdlib.h>
+
 using namespace std;
 
 // stuff from flex that bison needs to know about:
@@ -9,6 +17,22 @@ extern "C" int yyparse();
 extern "C" FILE *yyin;
  
 void yyerror(const char *s);
+
+Scope mainScope("global");
+
+void generateQuad(char * op , char * arg1 , char * arg2 );
+void qudraple();
+void AddToTable(int ,int, string);
+
+int ind=0;
+char temp='A';
+struct code
+{
+	string opd1;
+	string opd2;
+	string opr;
+};
+
 %}
 
 // Bison fundamentally works by asking flex to get the next token, which it
@@ -19,17 +43,17 @@ void yyerror(const char *s);
 %union {
 	int ival;
 	float fval;
-	char *sval;
-	char *idval;
+	char * sval;
+	char * idval;
 }
 
 // define the "terminal symbol" token types I'm going to use (in CAPS
 // by convention), and associate each with a field of the union:
-%token <ival> INT
+%token <ival> INT //
 %token <fval> FLOAT
 %token <sval> STRING
-%token <idval> ID
-%token TYPE_FLOAT TYPE_INT TYPE_STRING TYPE_BOOL SEMI_COLON COLON COMMA CONST EQUAL TRUE FALSE
+%token <idval> BOOL_ID FLOAT_ID STR_ID INT_ID
+%token SEMI_COLON COLON COMMA CONST VAR EQUAL TRUE FALSE  //TYPE_FLOAT TYPE_INT TYPE_STRING TYPE_BOOL
 
 %left LOGIC_OR
 %left LOGIC_AND
@@ -49,42 +73,58 @@ void yyerror(const char *s);
 %token OPEN_BRACKET CLOSE_BRACKET 
 %token OPEN_PARANTH CLOSE_PARANTH
 %token IF ELSE FOR WHILE SWITCH CASE REPEAT UNTIL DEFAULT
+
+%type <idval> int_expr
+//%type <fval> float_expr
+//%type <sval> str_expr
+
 %%
 // this is the actual grammar that bison will parse, but for right now it's just
 // something silly to echo to the screen what bison gets from flex.  We'll
 // make a real one shortly:
 
 stmt:
-	variable stmt | constant stmt | assignment stmt | if_else_if_else_stmt stmt | for_loop stmt | while_loop stmt | repeat_until_loop stmt | switch_case stmt |
-	variable | constant | assignment | if_else_if_else_stmt | for_loop | while_loop | repeat_until_loop | switch_case ;
+	variable stmt | constant_stmt stmt | assignment stmt | if_else_if_else_stmt stmt | for_loop stmt | while_loop stmt | repeat_until_loop stmt | switch_case stmt |
+	variable | constant_stmt | assignment | if_else_if_else_stmt | for_loop | while_loop | repeat_until_loop | switch_case ;
 variable: 
-	type ID SEMI_COLON 
-	;
+	VAR id SEMI_COLON ;
+
+	
+constant_stmt:
+	CONST constant;
 	
 constant:
-	CONST type ID EQUAL value SEMI_COLON;
+	INT_ID EQUAL int_value SEMI_COLON { cout << "const int id " << endl; } |
+	FLOAT_ID EQUAL float_value SEMI_COLON { cout << "const float id " << endl; }|
+	STR_ID EQUAL str_value SEMI_COLON { cout << "const str id " << endl; } |
+	BOOL_ID EQUAL bool_value SEMI_COLON { cout << "const bool id " << endl; }
+	;
+
+	
+int_value:
+	INT | INT_ID  ;
+float_value:
+	FLOAT | FLOAT_ID ;
+str_value:
+	STRING | STR_ID ;
+bool_value:
+	boolean | BOOL_ID ;
 	
 assignment:
-	ID EQUAL right_hand_side SEMI_COLON; 
-	
-right_hand_side:
-	math_expr | boolean | STRING ; //ID and INT and FLOAT are included in math_expr
-
-//////TODO : modify this math_expr & int_expr	
-math_expr:
-	math_expr PLUS math_expr { cout << "PLUS: " <<endl; } | //<< $$=$1+$3 
-	math_expr MINUS math_expr { cout << "MINUS: " <<endl; }| //<< $$=$1-$3
-	math_expr MUL math_expr { cout << "MUL: " << endl; }| //$$=$1*$3 <<
-	math_expr DIV math_expr { cout << "DIV: " <<endl; }|  //<< $$=$1/$3 
-	math_expr MOD math_expr { cout << "MOD: " << endl; }|  //$$=$1%$3 <<
-	math_expr POW math_expr { cout << "POW: " << endl; }|  //$$=pow($1,$3) <<
-	
-	OPEN_BRACKET math_expr CLOSE_BRACKET { cout << "Brackets  " <<endl; } | //<< $$=$2 
-	int_expr | 
-	number // << $$=$1 
+	INT_ID EQUAL int_expr SEMI_COLON {	mainScope.insert((string)$1,(void *)$3); cout<< "ass for int id -> INT_ID: " <<$1<<"with expr value "<<$3;  }  |
+	FLOAT_ID EQUAL float_int_expr SEMI_COLON |
+	STR_ID EQUAL str_expr SEMI_COLON |
+	BOOL_ID EQUAL bool_expr SEMI_COLON 
 	;
-	
+
+
+
 int_expr:
+	int_expr PLUS int_expr { /*$$=$1+$3;*/  cout << "PLUS: " << $$ <<endl; generateQuad("Add",$1,$3);} |   //AddToTable($1,$3,"PLUS");
+	int_expr MINUS int_expr { /*$$=$1-$3;*/ cout << "MINUS: " << $$ <<endl; }| 
+	int_expr MUL int_expr { /*$$=$1*$3;*/ cout << "MUL: " << $$ << endl;  }| 
+	int_expr DIV int_expr { /*$$=$1/$3;*/ cout << "DIV: " << $$ <<endl; }|  
+	int_expr MOD int_expr { /*$$=$1%$3;*/ cout << "MOD: " << $$ << endl; }|  
 	
 	int_expr BITWISE_AND int_expr { cout << "BITWISE_AND: " <<endl; } | //<< $$=$1&$3 
 	int_expr BITWISE_OR int_expr { cout << "BITWISE_OR: " <<endl; } | // << $$=$1|$3 
@@ -92,15 +132,47 @@ int_expr:
 	BITWISE_NOT int_expr { cout << "BITWISE_NOT: " <<endl; } | // << $$=~$2 
 	int_expr BITWISE_SHIFT_LEFT int_expr { cout << "BITWISE_SHIFT_LEFT: " <<endl; } | //<< $$=$1<<$3 
 	int_expr BITWISE_SHIFT_RIGHT int_expr { cout << "BITWISE_SHIFT_RIGHT: " <<endl; } |  //<< $$=$1>>$3 
-	INT 
+	
+	OPEN_BRACKET int_expr CLOSE_BRACKET { cout << "Brackets  " <<endl; } | //<< $$=$2
+	//INT | 
+	INT_ID {cout<<"int id hh"<<endl;}//{$$=(int)mainScope.lookup((string)$1);}  //$$=symbols.find($1)->second;
 	;
-		
-number:
-	INT { cout << "bison found int " << $1 <<endl; }
-	| FLOAT { cout << "bison found float " << $1 << endl; }
-	| ID { cout << "bison found id " << $1 << endl; }
+
+float_expr:
+	float_expr PLUS float_expr { cout << "PLUS: " <<endl; } | //<< $$=$1+$3 
+	float_expr MINUS float_expr { cout << "MINUS: " <<endl; }| //<< $$=$1-$3
+	float_expr MUL float_expr { cout << "MUL: " << endl; }| //$$=$1*$3 <<
+	float_expr DIV float_expr { cout << "DIV: " <<endl; }|  //<< $$=$1/$3 
+	float_expr MOD float_expr { cout << "MOD: " << endl; }|  //$$=$1%$3 <<
+	float_expr POW float_expr { cout << "POW: " << endl; }|  //$$=pow($1,$3) <<
+	
+	float_expr PLUS int_expr { cout << "PLUS: " <<endl; } | //<< $$=$1+$3 
+	float_expr MINUS int_expr { cout << "MINUS: " <<endl; }| //<< $$=$1-$3
+	float_expr MUL int_expr { cout << "MUL: " << endl; }| //$$=$1*$3 <<
+	float_expr DIV int_expr { cout << "DIV: " <<endl; }|  //<< $$=$1/$3 
+	float_expr MOD int_expr { cout << "MOD: " << endl; }|  //$$=$1%$3 <<
+	float_expr POW int_expr { cout << "POW: " << endl; }|  //$$=pow($1,$3) <<
+	
+	int_expr PLUS float_expr { cout << "PLUS: " <<endl; } | //<< $$=$1+$3 
+	int_expr MINUS float_expr { cout << "MINUS: " <<endl; }| //<< $$=$1-$3
+	int_expr MUL float_expr { cout << "MUL: " << endl; }| //$$=$1*$3 <<
+	int_expr DIV float_expr { cout << "DIV: " <<endl; }|  //<< $$=$1/$3 
+	int_expr MOD float_expr { cout << "MOD: " << endl; }|  //$$=$1%$3 <<
+	int_expr POW float_expr { cout << "POW: " << endl; }|  //$$=pow($1,$3) <<
+	
+	OPEN_BRACKET float_expr CLOSE_BRACKET { cout << "Brackets  " <<endl; } | //<< $$=$2 
+	FLOAT  //| FLOAT_ID |
+	//int_expr 
 	;
 	
+float_int_expr:
+	float_expr | int_expr ;
+	
+str_expr:
+	str_expr PLUS str_expr |
+	STRING //| STR_ID
+	;
+
 if_else_if_else_stmt:
 	if_stmt else_if_stmt ;
 
@@ -120,13 +192,13 @@ for_loop:
 	FOR OPEN_BRACKET for_assignment COMMA bool_expr COMMA for_assignment CLOSE_BRACKET OPEN_PARANTH stmt CLOSE_PARANTH
 	
 for_assignment:
-	ID EQUAL math_expr ;
+	id EQUAL int_expr ;		//To Check here .. int_expr?
 	
 repeat_until_loop:
 	REPEAT OPEN_PARANTH stmt CLOSE_PARANTH UNTIL OPEN_BRACKET bool_expr CLOSE_BRACKET SEMI_COLON ;
 	
 switch_case:	
-	SWITCH OPEN_BRACKET ID CLOSE_BRACKET OPEN_PARANTH case_stmt CLOSE_PARANTH ;
+	SWITCH OPEN_BRACKET id CLOSE_BRACKET OPEN_PARANTH case_stmt CLOSE_PARANTH ;
 	
 case_stmt:
 	CASE value COLON stmt case_stmt |
@@ -149,42 +221,102 @@ bool_expr:
 	;
 	
 compare_opd:
-	ID | INT | FLOAT | STRING ;
+	 INT | FLOAT | STRING ; //add IDs 
 	
 value:
 	INT | FLOAT | STRING | boolean ;
 	
-
 	
 boolean:
 	TRUE | FALSE;
 	
-type: 
-	TYPE_INT { cout << "bison found a type int " << endl; }
-	| TYPE_FLOAT { cout << "bison found a type float " << endl; }
-	| TYPE_STRING { cout << "bison found a type str "  << endl; }
-	| TYPE_BOOL { cout << "bison found a type bool "  << endl; }
+id:
+	INT_ID { cout << " int id " << endl; }
+	| FLOAT_ID  { cout << " float id " << endl; }
+	| STR_ID  { cout << " str id " << endl; }
+	| BOOL_ID  { cout << " bool id " << endl; }
 	;
-
 	
 	
 %%
+struct code codeInstr[20];
+int id=0;
+ofstream quad;
+int lineNo=0;
+
+void AddToTable(string opd1,string opd2,string opr)
+{
+	codeInstr[ind].opd1=opd1;
+	codeInstr[ind].opd2=opd2;
+	codeInstr[ind].opr=opr;
+	ind++;
+	temp++;
+	//return temp;
+}
+
+void quadraple()
+{
+	int cnt=0;
+	temp++;
+	//printf(“\n\n\t QUADRAPLE CODE\n\n”);
+	while(cnt<ind)
+	{
+		/*//printf(“%c : = \t”,temp);
+		printf(“%d”,id);
+		printf(“\t”);
+		printf(“%c”,codeInstr[cnt].opr);
+		printf(“\t”);
+		if(isalpha(codeInstr[cnt].opd1))
+		printf(“%c\t”,codeInstr[cnt].opd1);
+		else
+		{printf(“%c\t”,temp);}
+
+		//printf(“%c\t”,codeInstr[cnt].opr);
+
+		if(isalpha(codeInstr[cnt].opd2))
+		printf(“%c\t”,codeInstr[cnt].opd2);
+		else
+		{printf(“%c\t”,temp);}
+
+		printf(“%c”,temp);
+
+		printf(“\n”);
+		cnt++;
+		temp++;
+		id++;*/
+		cout<< cnt <<" " << codeInstr[cnt].opr <<" " << codeInstr[cnt].opd1 << " " << codeInstr[cnt].opd2 <<endl;
+
+	}
+}
+
+void generateQuad(char * op , char * arg1 , char * arg2 ){
+	quad << lineNo << " " << op <<" " << arg1 << " " << arg2 << endl;
+	
+}
 
 int main(int, char**) {
 	// open a file handle to a particular file:
-	FILE *myfile = fopen("a.engy.file", "r");
+	FILE *myfile = fopen("sample.voo", "r");
 	// make sure it is valid:
 	if (!myfile) {
-		cout << "I can't open a.engy.file!" << endl;
+		cout << "I can't open sample.voo!" << endl;
 		return -1;
 	}
 	// set flex to read from it instead of defaulting to STDIN:
 	yyin = myfile;
 	
+	//create a file to write the quadruples in 
+	
+	quad.open ("quad.txt");
+	
+	
 	// parse through the input until there is no more:
 	do {
 		yyparse();
+		quadraple();
 	} while (!feof(yyin));
+	
+	quad.close();
 	
 }
 

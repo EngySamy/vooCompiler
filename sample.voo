@@ -1,38 +1,7 @@
-int hjk;
-const bool str_ty7 = true;
-float _r;
-_r= f1 - h * (5 + 3) / k;
+var i_hjk;
+const b_tr_ty7 = true;
+var f_r;
+
+i_rr= i_g+i_k *i_l;
 
 
-if("RR" <= "J" && !true || ( q!=l || s==r))
-{ 
-	str f;
-}
-else if(e> 2){
-	dd=k+l;
-} 
-else if(e==o) {
-	gg=i;
-}
-else{
-	gg=i;
-}
-
-for(o=5+l, o<=l , o=o+6) { 
-	float _r;
-	if(false){
-		str r;
-		r="ll";
-	}
-	
-	while(e!=6){
-		kk=g;
-	}
-}
-
-switch(j){
-	case 5:
-		e=8;
-	default:
-		e=p;
-}

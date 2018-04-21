@@ -5,15 +5,14 @@
 using namespace std;
 #define YY_DECL extern "C" int yylex()
 
-#include "engy.tab.h"  // to get the token types that we return
+#include "voo.tab.h"  // to get the token types that we return
+#include "symTab.h"
 
 %}
 %%
-"int" 		{return TYPE_INT;}
-"float" 	{return TYPE_FLOAT;}
-"str" 		{return TYPE_STRING;}
-"bool"		{return TYPE_BOOL;}
+
 "const"		{return CONST;}
+"var"		{return VAR;}
 "true" 		{return TRUE;}
 "false"		{return FALSE;}
 "="			{return EQUAL;}
@@ -77,10 +76,28 @@ using namespace std;
 	return INT; 
 }
 
-[a-zA-Z\_][a-zA-Z0-9\_]*	{
+i\_[a-zA-Z\_][a-zA-Z0-9\_]*	{
 	yylval.idval = strdup(yytext);
 	//cout<< "Id from lex is " << yylval.idval <<endl;
-	return ID;
+	return INT_ID;
+}
+
+f\_[a-zA-Z\_][a-zA-Z0-9\_]*	{
+	yylval.idval = strdup(yytext);
+	//cout<< "Id from lex is " << yylval.idval <<endl;
+	return FLOAT_ID;
+}
+
+s\_[a-zA-Z\_][a-zA-Z0-9\_]*	{
+	yylval.idval = strdup(yytext);
+	//cout<< "Id from lex is " << yylval.idval <<endl;
+	return STR_ID;
+}
+
+b\_[a-zA-Z\_][a-zA-Z0-9\_]*	{
+	yylval.idval = strdup(yytext);
+	//cout<< "Id from lex is " << yylval.idval <<endl;
+	return BOOL_ID;
 }
 
 [a-zA-Z0-9]+      {
