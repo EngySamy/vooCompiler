@@ -1,1 +1,16 @@
-0 Add i_g i_k
+0 MUL i_k i_l t5 
+1 ADD i_g t5 t6 
+2 DIV i_pp i_ll t9 
+3 SUB t6 t9 t10 
+4 MUL 5 6 t13 
+5 DIV t13 9 t15 
+6 ADD 3 i_rr t18 
+7 SHFTL t15 t18 t19 
+8 NOT 4  t22 
+9 SHFTL 7 2 t25 
+10 AND t22 t25 t26 
+11 OR 5 t26 t27 
+12 MUL 1088400916 1092825907 t32 
+13 ADD 1084856730 t32 t33 
+14 SUB t33 9 t35 
+15 ADD t35 1077936128 t37 

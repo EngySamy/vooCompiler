@@ -46,48 +46,32 @@
      FLOAT_ID = 262,
      STR_ID = 263,
      INT_ID = 264,
-     SEMI_COLON = 265,
-     COLON = 266,
-     COMMA = 267,
-     CONST = 268,
-     VAR = 269,
-     EQUAL = 270,
-     TRUE = 271,
-     FALSE = 272,
-     LOGIC_OR = 273,
-     LOGIC_AND = 274,
-     BITWISE_OR = 275,
-     BITWISE_XOR = 276,
-     BITWISE_AND = 277,
-     NOT_EQ = 278,
-     EQ = 279,
-     SM_EQ = 280,
-     SM = 281,
-     GR_EQ = 282,
-     GR = 283,
-     BITWISE_SHIFT_LEFT = 284,
-     BITWISE_SHIFT_RIGHT = 285,
-     MINUS = 286,
-     PLUS = 287,
-     MOD = 288,
-     DIV = 289,
-     MUL = 290,
-     POW = 291,
-     BITWISE_NOT = 292,
-     LOGIC_NOT = 293,
-     OPEN_BRACKET = 294,
-     CLOSE_BRACKET = 295,
-     OPEN_PARANTH = 296,
-     CLOSE_PARANTH = 297,
-     IF = 298,
-     ELSE = 299,
-     FOR = 300,
-     WHILE = 301,
-     SWITCH = 302,
-     CASE = 303,
-     REPEAT = 304,
-     UNTIL = 305,
-     DEFAULT = 306
+     CONST = 265,
+     VAR = 266,
+     EQUAL = 267,
+     TRUE = 268,
+     FALSE = 269,
+     LOGIC_OR = 270,
+     LOGIC_AND = 271,
+     NOT_EQ = 272,
+     EQ = 273,
+     SM_EQ = 274,
+     SM = 275,
+     GR_EQ = 276,
+     GR = 277,
+     BITWISE_SHIFT_LEFT = 278,
+     BITWISE_SHIFT_RIGHT = 279,
+     POW = 280,
+     LOGIC_NOT = 281,
+     IF = 282,
+     ELSE = 283,
+     FOR = 284,
+     WHILE = 285,
+     SWITCH = 286,
+     CASE = 287,
+     REPEAT = 288,
+     UNTIL = 289,
+     DEFAULT = 290
    };
 #endif
 
@@ -104,11 +88,12 @@ typedef union YYSTYPE
 	float fval;
 	char * sval;
 	char * idval;
+	struct NodeWithType * nodeval;
 
 
 
 /* Line 1676 of yacc.c  */
-#line 112 "voo.tab.h"
+#line 97 "voo.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

@@ -6,7 +6,6 @@ using namespace std;
 #define YY_DECL extern "C" int yylex()
 
 #include "voo.tab.h"  // to get the token types that we return
-#include "symTab.h"
 
 %}
 %%
@@ -16,25 +15,11 @@ using namespace std;
 "true" 		{return TRUE;}
 "false"		{return FALSE;}
 "="			{return EQUAL;}
-";" 		{return SEMI_COLON;}
-":"			{return COLON;}
-","			{return COMMA;}
-
-"+"			{return PLUS;}
-"-"			{return MINUS;}
-"**"		{return POW;}
-"*"			{return MUL;}
-"/"			{return DIV;}
-"%"			{return MOD;}
 
 "||"		{return LOGIC_OR;}
 "&&"		{return LOGIC_AND;}
 "!"			{return LOGIC_NOT;}
 
-"|"			{return BITWISE_OR;}
-"^"			{return BITWISE_XOR;}
-"&"			{return BITWISE_AND;}
-"~"			{return BITWISE_NOT;}
 "<<"		{return BITWISE_SHIFT_LEFT;}
 ">>"		{return BITWISE_SHIFT_RIGHT;}
 
@@ -45,11 +30,6 @@ using namespace std;
 "!="		{return NOT_EQ;}
 "=="		{return EQ;}
 
-"("			{return OPEN_BRACKET;}
-")"			{return CLOSE_BRACKET;}
-
-"{"			{return OPEN_PARANTH;}
-"}"			{return CLOSE_PARANTH;}
 
 "if"		{return IF;}
 "else"		{return ELSE;}
@@ -64,6 +44,7 @@ using namespace std;
 
 
 [ \t\n]           ;
+[-+*/%~(){};:,|&] { return *yytext;}
 [0-9]+\.[0-9]+ { 
 	yylval.fval = atof(yytext);
 	//cout<< "float from lex is " << yylval.fval <<endl;	
@@ -107,5 +88,4 @@ b\_[a-zA-Z\_][a-zA-Z0-9\_]*	{
 }
 
 
-.                ;
 %%

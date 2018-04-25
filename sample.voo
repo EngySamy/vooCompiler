@@ -1,7 +1,13 @@
 var i_hjk;
-const b_tr_ty7 = true;
-var f_r;
+const i_tr_ty7 = 5;
+i_hh= i_h;
 
-i_rr= i_g+i_k *i_l;
+i_rr= i_g + i_k * i_l - i_pp / i_ll ;
 
+i_hl= 5* 6 / 9  <<  3 + i_rr;
 
+i_e= 5| ~ 4 & 7 << 2;
+
+var f_gkg;
+const f_tr_ty7 = 5.3;
+f_gkg= 5.3 + 6.99 * 10.2 -9 +3.0;

@@ -3,11 +3,12 @@
 #include <iostream>
 #include <math.h>
 #include <stdarg.h>
-#include "symTab.h"
+#include "sym.h"
 #include <string.h>
 #include <fstream>
 #include <stdio.h>
 #include <stdlib.h>
+#include <map>
 
 using namespace std;
 
@@ -19,19 +20,18 @@ extern "C" FILE *yyin;
 void yyerror(const char *s);
 
 Scope mainScope("global");
+map<NodeWithType* , int > nodes;
 
-void generateQuad(char * op , char * arg1 , char * arg2 );
-void qudraple();
-void AddToTable(int ,int, string);
+void generateQuad(string op , NodeWithType * arg1 , NodeWithType * arg2 ,NodeWithType * res );
 
-int ind=0;
-char temp='A';
-struct code
-{
-	string opd1;
-	string opd2;
-	string opr;
-};
+void newSymbolRecord( char *, IdType , bool , NodeWithType * ); 
+Node * NewNodeFloat(float );
+Node * NewNodeInt(int);
+NodeWithType * createNewValueNode(Node *);
+NodeWithType * createNewIdNode(char *);
+NodeWithType * createNewExprNode(oprt, int , NodeWithType *, NodeWithType *);
+
+int cntNodes=0;
 
 %}
 
@@ -45,6 +45,7 @@ struct code
 	float fval;
 	char * sval;
 	char * idval;
+	struct NodeWithType * nodeval;
 }
 
 // define the "terminal symbol" token types I'm going to use (in CAPS
@@ -52,29 +53,28 @@ struct code
 %token <ival> INT //
 %token <fval> FLOAT
 %token <sval> STRING
-%token <idval> BOOL_ID FLOAT_ID STR_ID INT_ID
-%token SEMI_COLON COLON COMMA CONST VAR EQUAL TRUE FALSE  //TYPE_FLOAT TYPE_INT TYPE_STRING TYPE_BOOL
+%token <idval> BOOL_ID FLOAT_ID STR_ID INT_ID 
+%token CONST VAR EQUAL TRUE FALSE  //TYPE_FLOAT TYPE_INT TYPE_STRING TYPE_BOOL
 
 %left LOGIC_OR
 %left LOGIC_AND
-%left BITWISE_OR
-%left BITWISE_XOR
-%left BITWISE_AND
+%left '|'
+%left '^'
+%left '&'
 
 %left EQ NOT_EQ
 %left GR GR_EQ SM SM_EQ 
 
 %left BITWISE_SHIFT_RIGHT BITWISE_SHIFT_LEFT
-%left PLUS MINUS
-%left MUL DIV MOD 
+%left '+' '-'
+%left '*' '/' '%'
+ 
 %right POW
-%right LOGIC_NOT BITWISE_NOT
+%right LOGIC_NOT '~'
 
-%token OPEN_BRACKET CLOSE_BRACKET 
-%token OPEN_PARANTH CLOSE_PARANTH
 %token IF ELSE FOR WHILE SWITCH CASE REPEAT UNTIL DEFAULT
 
-%type <idval> int_expr
+%type <nodeval> int_expr float_expr float_int_expr
 //%type <fval> float_expr
 //%type <sval> str_expr
 
@@ -87,89 +87,93 @@ stmt:
 	variable stmt | constant_stmt stmt | assignment stmt | if_else_if_else_stmt stmt | for_loop stmt | while_loop stmt | repeat_until_loop stmt | switch_case stmt |
 	variable | constant_stmt | assignment | if_else_if_else_stmt | for_loop | while_loop | repeat_until_loop | switch_case ;
 variable: 
-	VAR id SEMI_COLON ;
+	VAR id ';' ;
 
 	
 constant_stmt:
 	CONST constant;
 	
 constant:
-	INT_ID EQUAL int_value SEMI_COLON { cout << "const int id " << endl; } |
-	FLOAT_ID EQUAL float_value SEMI_COLON { cout << "const float id " << endl; }|
-	STR_ID EQUAL str_value SEMI_COLON { cout << "const str id " << endl; } |
-	BOOL_ID EQUAL bool_value SEMI_COLON { cout << "const bool id " << endl; }
+	INT_ID EQUAL INT ';' { cout << "const int id " << endl;
+								newSymbolRecord($1,integer,false, createNewValueNode(NewNodeInt($3)) );
+								mainScope.printAll();
+								cout<< "ass for int id (const) -> INT_ID: " <<$1<<" with value "<<$3<<endl;}  |
+	FLOAT_ID EQUAL FLOAT ';' { cout << "const float id " << endl;
+								newSymbolRecord($1,floatt,false, createNewValueNode(NewNodeFloat($3)) );
+								mainScope.printAll();
+								cout<< "ass for int id (const) -> INT_ID: " <<$1<<" with value "<<$3<<endl;}|
+	STR_ID EQUAL STRING ';' { cout << "const str id " << endl; } |
+	BOOL_ID EQUAL boolean ';' { cout << "const bool id " << endl; }
 	;
-
-	
-int_value:
-	INT | INT_ID  ;
-float_value:
-	FLOAT | FLOAT_ID ;
-str_value:
-	STRING | STR_ID ;
-bool_value:
-	boolean | BOOL_ID ;
 	
 assignment:
-	INT_ID EQUAL int_expr SEMI_COLON {	mainScope.insert((string)$1,(void *)$3); cout<< "ass for int id -> INT_ID: " <<$1<<"with expr value "<<$3;  }  |
-	FLOAT_ID EQUAL float_int_expr SEMI_COLON |
-	STR_ID EQUAL str_expr SEMI_COLON |
-	BOOL_ID EQUAL bool_expr SEMI_COLON 
+	INT_ID EQUAL int_expr ';' { 
+				newSymbolRecord($1,integer,true,$3);
+				//generateQuad("Sto",$3,NULL,$1);
+				mainScope.printAll();
+				cout<< "ass for int id (var) -> INT_ID: " <<$1<<" with value "<<$3<<endl;} |
+	FLOAT_ID EQUAL float_int_expr ';' { 
+				newSymbolRecord($1,floatt,true,$3);
+				//generateQuad("Sto",$3,NULL,$1);
+				mainScope.printAll();
+				cout<< "ass for float id (var) -> INT_ID: " <<$1<<" with value "<<$3<<endl;}|
+	STR_ID EQUAL str_expr ';' |
+	BOOL_ID EQUAL bool_expr ';' 
 	;
 
 
 
 int_expr:
-	int_expr PLUS int_expr { /*$$=$1+$3;*/  cout << "PLUS: " << $$ <<endl; generateQuad("Add",$1,$3);} |   //AddToTable($1,$3,"PLUS");
-	int_expr MINUS int_expr { /*$$=$1-$3;*/ cout << "MINUS: " << $$ <<endl; }| 
-	int_expr MUL int_expr { /*$$=$1*$3;*/ cout << "MUL: " << $$ << endl;  }| 
-	int_expr DIV int_expr { /*$$=$1/$3;*/ cout << "DIV: " << $$ <<endl; }|  
-	int_expr MOD int_expr { /*$$=$1%$3;*/ cout << "MOD: " << $$ << endl; }|  
+	int_expr '+' int_expr { $$=createNewExprNode(pls,2,$1,$3); generateQuad("ADD",$1,$3,$$); cout << "PLUS: " << $$ <<endl; } | 
+	int_expr '-' int_expr { $$=createNewExprNode(mins,2,$1,$3); generateQuad("SUB",$1,$3,$$); cout << "MINUS: " << $$ <<endl; }| 
+	int_expr '*' int_expr { $$=createNewExprNode(mul,2,$1,$3); generateQuad("MUL",$1,$3,$$); cout << "MUL: " << $$ << endl;  }| 
+	int_expr '/' int_expr { $$=createNewExprNode(dv,2,$1,$3); generateQuad("DIV",$1,$3,$$); cout << "DIV: " << $$ <<endl; }|  
+	int_expr '%' int_expr { $$=createNewExprNode(md,2,$1,$3);  generateQuad("MOD",$1,$3,$$);cout << "MOD: " << $$ << endl; }|  
 	
-	int_expr BITWISE_AND int_expr { cout << "BITWISE_AND: " <<endl; } | //<< $$=$1&$3 
-	int_expr BITWISE_OR int_expr { cout << "BITWISE_OR: " <<endl; } | // << $$=$1|$3 
-	int_expr BITWISE_XOR int_expr { cout << "BITWISE_XOR: " <<endl; } | // << $$=$1^$3 
-	BITWISE_NOT int_expr { cout << "BITWISE_NOT: " <<endl; } | // << $$=~$2 
-	int_expr BITWISE_SHIFT_LEFT int_expr { cout << "BITWISE_SHIFT_LEFT: " <<endl; } | //<< $$=$1<<$3 
-	int_expr BITWISE_SHIFT_RIGHT int_expr { cout << "BITWISE_SHIFT_RIGHT: " <<endl; } |  //<< $$=$1>>$3 
+	int_expr '&' int_expr { $$=createNewExprNode(b_and,2,$1,$3); generateQuad("AND",$1,$3,$$); cout << "BITWISE_AND: " <<endl; } | //<< $$=$1&$3 
+	int_expr '|' int_expr { $$=createNewExprNode(b_or,2,$1,$3); generateQuad("OR",$1,$3,$$); cout << "BITWISE_OR: " <<endl; } | // << $$=$1|$3 
+	int_expr '^' int_expr { $$=createNewExprNode(b_xor,2,$1,$3); generateQuad("XOR",$1,$3,$$); cout << "BITWISE_XOR: " <<endl; } | // << $$=$1^$3 
+	'~' int_expr { $$=createNewExprNode(b_not,1,$2,NULL); generateQuad("NOT",$2,NULL,$$); cout << "BITWISE_NOT: " <<endl; } | // << $$=~$2 
+	int_expr BITWISE_SHIFT_LEFT int_expr { $$=createNewExprNode(b_shft_r,2,$1,$3); generateQuad("SHFTL",$1,$3,$$); cout << "BITWISE_SHIFT_LEFT: " <<endl; } | //<< $$=$1<<$3 
+	int_expr BITWISE_SHIFT_RIGHT int_expr { $$=createNewExprNode(b_shft_l,2,$1,$3); generateQuad("SHFTR",$1,$3,$$); cout << "BITWISE_SHIFT_RIGHT: " <<endl; } |  //<< $$=$1>>$3 
 	
-	OPEN_BRACKET int_expr CLOSE_BRACKET { cout << "Brackets  " <<endl; } | //<< $$=$2
-	//INT | 
-	INT_ID {cout<<"int id hh"<<endl;}//{$$=(int)mainScope.lookup((string)$1);}  //$$=symbols.find($1)->second;
+	//'(' int_expr ')' { cout << "Brackets  " <<endl; } | //<< $$=$2
+	INT { $$=createNewValueNode(NewNodeInt($1)); cout<<"int value"<<endl; } |
+	INT_ID { $$=createNewIdNode($1); cout<<"int id "<<endl;}
 	;
 
 float_expr:
-	float_expr PLUS float_expr { cout << "PLUS: " <<endl; } | //<< $$=$1+$3 
-	float_expr MINUS float_expr { cout << "MINUS: " <<endl; }| //<< $$=$1-$3
-	float_expr MUL float_expr { cout << "MUL: " << endl; }| //$$=$1*$3 <<
-	float_expr DIV float_expr { cout << "DIV: " <<endl; }|  //<< $$=$1/$3 
-	float_expr MOD float_expr { cout << "MOD: " << endl; }|  //$$=$1%$3 <<
-	float_expr POW float_expr { cout << "POW: " << endl; }|  //$$=pow($1,$3) <<
+	float_expr '+' float_expr { $$=createNewExprNode(pls,2,$1,$3); generateQuad("ADD",$1,$3,$$); cout << "PLUS: " << $$ <<endl; } |
+	float_expr '-' float_expr { $$=createNewExprNode(mins,2,$1,$3); generateQuad("SUB",$1,$3,$$); cout << "MINUS: " << $$ <<endl; }| 
+	float_expr '*' float_expr { $$=createNewExprNode(mul,2,$1,$3); generateQuad("MUL",$1,$3,$$); cout << "MUL: " << $$ << endl;  }| 
+	float_expr '/' float_expr { $$=createNewExprNode(dv,2,$1,$3); generateQuad("DIV",$1,$3,$$); cout << "DIV: " << $$ <<endl; }| 
+	float_expr '%' float_expr { $$=createNewExprNode(md,2,$1,$3);  generateQuad("MOD",$1,$3,$$);cout << "MOD: " << $$ << endl; }| 
+	float_expr POW float_expr { $$=createNewExprNode(pw,2,$1,$3);  generateQuad("POW",$1,$3,$$);cout << "POW: " << $$ << endl; }| 
 	
-	float_expr PLUS int_expr { cout << "PLUS: " <<endl; } | //<< $$=$1+$3 
-	float_expr MINUS int_expr { cout << "MINUS: " <<endl; }| //<< $$=$1-$3
-	float_expr MUL int_expr { cout << "MUL: " << endl; }| //$$=$1*$3 <<
-	float_expr DIV int_expr { cout << "DIV: " <<endl; }|  //<< $$=$1/$3 
-	float_expr MOD int_expr { cout << "MOD: " << endl; }|  //$$=$1%$3 <<
-	float_expr POW int_expr { cout << "POW: " << endl; }|  //$$=pow($1,$3) <<
+	float_expr '+' int_expr { $$=createNewExprNode(pls,2,$1,$3); generateQuad("ADD",$1,$3,$$); cout << "PLUS: " << $$ <<endl; } |
+	float_expr '-' int_expr { $$=createNewExprNode(mins,2,$1,$3); generateQuad("SUB",$1,$3,$$); cout << "MINUS: " << $$ <<endl; }| 
+	float_expr '*' int_expr { $$=createNewExprNode(mul,2,$1,$3); generateQuad("MUL",$1,$3,$$); cout << "MUL: " << $$ << endl;  }| 
+	float_expr '/' int_expr { $$=createNewExprNode(dv,2,$1,$3); generateQuad("DIV",$1,$3,$$); cout << "DIV: " << $$ <<endl; }| 
+	float_expr '%' int_expr { $$=createNewExprNode(md,2,$1,$3);  generateQuad("MOD",$1,$3,$$);cout << "MOD: " << $$ << endl; }| 
+	float_expr POW int_expr { $$=createNewExprNode(pw,2,$1,$3);  generateQuad("POW",$1,$3,$$);cout << "POW: " << $$ << endl; }| 
 	
-	int_expr PLUS float_expr { cout << "PLUS: " <<endl; } | //<< $$=$1+$3 
-	int_expr MINUS float_expr { cout << "MINUS: " <<endl; }| //<< $$=$1-$3
-	int_expr MUL float_expr { cout << "MUL: " << endl; }| //$$=$1*$3 <<
-	int_expr DIV float_expr { cout << "DIV: " <<endl; }|  //<< $$=$1/$3 
-	int_expr MOD float_expr { cout << "MOD: " << endl; }|  //$$=$1%$3 <<
-	int_expr POW float_expr { cout << "POW: " << endl; }|  //$$=pow($1,$3) <<
+	int_expr '+' float_expr { $$=createNewExprNode(pls,2,$1,$3); generateQuad("ADD",$1,$3,$$); cout << "PLUS: " << $$ <<endl; } |
+	int_expr '-' float_expr { $$=createNewExprNode(mins,2,$1,$3); generateQuad("SUB",$1,$3,$$); cout << "MINUS: " << $$ <<endl; }| 
+	int_expr '*' float_expr { $$=createNewExprNode(mul,2,$1,$3); generateQuad("MUL",$1,$3,$$); cout << "MUL: " << $$ << endl;  }| 
+	int_expr '/' float_expr { $$=createNewExprNode(dv,2,$1,$3); generateQuad("DIV",$1,$3,$$); cout << "DIV: " << $$ <<endl; }| 
+	int_expr '%' float_expr { $$=createNewExprNode(md,2,$1,$3);  generateQuad("MOD",$1,$3,$$);cout << "MOD: " << $$ << endl; }| 
+	int_expr POW float_expr { $$=createNewExprNode(pw,2,$1,$3);  generateQuad("POW",$1,$3,$$);cout << "POW: " << $$ << endl; }| 
 	
-	OPEN_BRACKET float_expr CLOSE_BRACKET { cout << "Brackets  " <<endl; } | //<< $$=$2 
-	FLOAT  //| FLOAT_ID |
-	//int_expr 
+	'(' float_expr ')' { cout << "Brackets  " <<endl; } | //<< $$=$2 
+	FLOAT { $$=createNewValueNode(NewNodeFloat($1)); cout<<"float value"<<endl; }  | 
+	FLOAT_ID  { $$=createNewIdNode($1); cout<<"float id "<<endl;}
 	;
 	
 float_int_expr:
 	float_expr | int_expr ;
 	
 str_expr:
-	str_expr PLUS str_expr |
+	str_expr '+' str_expr |
 	STRING //| STR_ID
 	;
 
@@ -177,32 +181,32 @@ if_else_if_else_stmt:
 	if_stmt else_if_stmt ;
 
 if_stmt:
-	IF OPEN_BRACKET bool_expr CLOSE_BRACKET OPEN_PARANTH stmt CLOSE_PARANTH { cout << "if " <<endl; }
+	IF '(' bool_expr ')' '{' stmt '}' { cout << "if " <<endl; }
 	;
 else_if_stmt:
 	ELSE if_stmt else_if_stmt { cout << "else if  " <<endl; } | //sequence of else if 
-	ELSE OPEN_PARANTH stmt CLOSE_PARANTH { cout << "else " <<endl; } | //else 
+	ELSE '{' stmt '}' { cout << "else " <<endl; } | //else 
 	{ cout << "epsilon " <<endl; }	//epsilon 
 	;
 	
 while_loop:
-	WHILE OPEN_BRACKET bool_expr CLOSE_BRACKET OPEN_PARANTH stmt CLOSE_PARANTH ;
+	WHILE '(' bool_expr ')' '{' stmt '}' ;
 	
 for_loop:
-	FOR OPEN_BRACKET for_assignment COMMA bool_expr COMMA for_assignment CLOSE_BRACKET OPEN_PARANTH stmt CLOSE_PARANTH
+	FOR '(' for_assignment ',' bool_expr ',' for_assignment ')' '{' stmt '}'
 	
 for_assignment:
 	id EQUAL int_expr ;		//To Check here .. int_expr?
 	
 repeat_until_loop:
-	REPEAT OPEN_PARANTH stmt CLOSE_PARANTH UNTIL OPEN_BRACKET bool_expr CLOSE_BRACKET SEMI_COLON ;
+	REPEAT '{' stmt '}' UNTIL '(' bool_expr ')' ';' ;
 	
 switch_case:	
-	SWITCH OPEN_BRACKET id CLOSE_BRACKET OPEN_PARANTH case_stmt CLOSE_PARANTH ;
+	SWITCH '(' id ')' '{' case_stmt '}' ;
 	
 case_stmt:
-	CASE value COLON stmt case_stmt |
-	DEFAULT COLON stmt |
+	CASE value ':' stmt case_stmt |
+	DEFAULT ':' stmt |
 	//epsilon
 	;
 	
@@ -217,7 +221,7 @@ bool_expr:
 	LOGIC_NOT bool_expr { cout << "LOGIC_NOT " <<endl; } |
 	bool_expr LOGIC_AND bool_expr { cout << "LOGIC_AND " <<endl; } | 
 	bool_expr LOGIC_OR bool_expr { cout << "LOGIC_OR " <<endl; } |
-	OPEN_BRACKET bool_expr CLOSE_BRACKET { cout << "Brackets " <<endl; }
+	'(' bool_expr ')' { cout << "Brackets " <<endl; }
 	;
 	
 compare_opd:
@@ -239,59 +243,88 @@ id:
 	
 	
 %%
-struct code codeInstr[20];
-int id=0;
+
 ofstream quad;
 int lineNo=0;
 
-void AddToTable(string opd1,string opd2,string opr)
-{
-	codeInstr[ind].opd1=opd1;
-	codeInstr[ind].opd2=opd2;
-	codeInstr[ind].opr=opr;
-	ind++;
-	temp++;
-	//return temp;
-}
-
-void quadraple()
-{
-	int cnt=0;
-	temp++;
-	//printf(“\n\n\t QUADRAPLE CODE\n\n”);
-	while(cnt<ind)
-	{
-		/*//printf(“%c : = \t”,temp);
-		printf(“%d”,id);
-		printf(“\t”);
-		printf(“%c”,codeInstr[cnt].opr);
-		printf(“\t”);
-		if(isalpha(codeInstr[cnt].opd1))
-		printf(“%c\t”,codeInstr[cnt].opd1);
-		else
-		{printf(“%c\t”,temp);}
-
-		//printf(“%c\t”,codeInstr[cnt].opr);
-
-		if(isalpha(codeInstr[cnt].opd2))
-		printf(“%c\t”,codeInstr[cnt].opd2);
-		else
-		{printf(“%c\t”,temp);}
-
-		printf(“%c”,temp);
-
-		printf(“\n”);
-		cnt++;
-		temp++;
-		id++;*/
-		cout<< cnt <<" " << codeInstr[cnt].opr <<" " << codeInstr[cnt].opd1 << " " << codeInstr[cnt].opd2 <<endl;
-
-	}
-}
-
-void generateQuad(char * op , char * arg1 , char * arg2 ){
-	quad << lineNo << " " << op <<" " << arg1 << " " << arg2 << endl;
+void generateQuad(string op , NodeWithType * arg1 , NodeWithType * arg2 , NodeWithType * res){
+	quad << lineNo << " " << op <<" ";
+	if(arg1->tp==val) quad << arg1->node->val->iVal << " " ;
+	else if(arg1->tp==identifier) quad << arg1-> node->id << " " ;
+	else quad << "t" << nodes[arg1] <<" ";
 	
+	if(arg2==NULL) quad << " " ;
+	else if(arg2->tp==val) quad << arg2->node->val->iVal << " " ;
+	else if(arg2->tp==identifier) quad << arg2-> node->id << " " ;
+	else quad << "t" << nodes[arg2] <<" ";
+	
+	if(res->tp==val) quad << res->node->val->iVal << " " ;
+	else if(res->tp==identifier) quad << res-> node->id << " " ;
+	else quad << "t" << nodes[res] <<" ";
+	
+	quad << endl;	
+	lineNo++;
+}
+
+void newSymbolRecord( char * name, IdType ty, bool v_c , NodeWithType* vlu ){
+	SymRec rec ;
+	rec.typ=ty;
+	rec.VarConst=v_c;
+	rec.value=vlu;
+	mainScope.insert(name,&rec); 
+}
+
+Node * NewNodeInt(int i){
+	Node * nd=new Node();
+	Value * v=new Value();
+	v->iVal=i;
+	nd->val=v;
+	cout<<"new value node created"<<endl;
+	return nd;
+}
+
+Node * NewNodeFloat(float i){
+	Node * nd=new Node();
+	Value * v=new Value();
+	v->fVal=i;
+	nd->val=v;
+	cout<<"new value node created"<<endl;
+	return nd;
+}
+
+NodeWithType * createNewValueNode(Node * nd){
+	NodeWithType * ndt=new NodeWithType();
+	ndt->node=nd;
+	ndt->tp=val;
+	nodes.insert(pair<NodeWithType*,int>(ndt,cntNodes++));
+	return ndt;
+}
+
+NodeWithType * createNewIdNode(char* idd){
+	Node * nd=new Node();
+	nd->id=idd;
+	cout<<"new id node created"<<endl;
+	NodeWithType * ndt=new NodeWithType();
+	ndt->node=nd;
+	ndt->tp=identifier;
+	nodes.insert(pair<NodeWithType*,int>(ndt,cntNodes++));
+	return ndt;
+}
+
+NodeWithType * createNewExprNode(oprt op, int n, NodeWithType* oprd1, NodeWithType* oprd2 ){
+	expr * ex=new expr();
+	ex->opt=op;
+	ex->nOps=n;
+	ex->opds[0]=oprd1;
+	ex->opds[1]=oprd2;
+	Node * nd=new Node();
+	nd->exp=ex;
+	cout<<"new expr node created"<<endl;
+	NodeWithType * ndt=new NodeWithType();
+	ndt->node=nd;
+	ndt->tp=expression;
+	nodes.insert(pair<NodeWithType*,int>(ndt,cntNodes++));
+	return ndt;
 }
 
 int main(int, char**) {
@@ -313,7 +346,7 @@ int main(int, char**) {
 	// parse through the input until there is no more:
 	do {
 		yyparse();
-		quadraple();
+		//quadraple();
 	} while (!feof(yyin));
 	
 	quad.close();
