@@ -1,0 +1,63 @@
+i_r= 6 - 8 * (5 + 3) / 3;
+
+if("RR" <= "J" && !true || ( q!=l || s==r))
+{ 
+	str f;
+}
+else if(e> 2){
+	dd=k+l;
+} 
+else if(e==o) {
+	gg=i;
+}
+else{
+	gg=i;
+}
+
+for(o=5+l, o<=l , o=o+6) { 
+	float _r;
+	if(false){
+		str r;
+		r="ll";
+	}
+	
+	while(e!=6){
+		kk=g;
+	}
+}
+
+switch(j){
+	case 5:
+		e=8;
+	default:
+		e=p;
+}
+
+while(i_g == i_o ){
+	i_kk = i_p * i_l + i_w;
+	
+	while(f_k!=f_pp){
+		i_kk = i_p * i_l + i_w;
+	}
+	const f_trgg_ty7 = 5.3;
+}
+
+
+if(s_ll==s_en && s_ll != s_ee4){
+	i_o=i_o+2;
+	if(f_hh==f_hhh){
+		i_hh=i_kk+6;
+	}
+	else{
+		i_hh=i_kk*6;
+	}
+}
+else if(s_ll != s_en){
+	i_l=i_o+66;
+}
+else if(s_ll == s_kk){
+	i_l=i_o/66;
+}
+else {
+	i_l=i_o-66;
+}

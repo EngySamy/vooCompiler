@@ -1,16 +1,46 @@
-0 STO 0  i_hjk 
-1 MUL 5 6 t4 
-2 DIV t4 9 t6 
-3 SHFTL t6 3 t8 
-4 STO t8  i_hjkkk 
-5 NOT 4  t12 
-6 SHFTL 7 2 t15 
-7 AND t12 t15 t16 
-8 OR 5 t16 t17 
-9 STO t17  i_e 
-10 STO 5.3  f_tr_ty7 
-11 MUL 6.99 10.2 t24 
-12 ADD 5.3 t24 t25 
-13 SUB t25 9 t27 
-14 ADD t27 3 t29 
-15 STO t29  f_gkg 
+0 STO, 0, , i_hjk, 
+1 MUL, 5, 6, t1, 
+2 DIV, t1, 9, t2, 
+3 SHFTL, t2, 3, t3, 
+4 STO, t3, , i_hjkkk, 
+5 MUL, i_p, i_l, t7, 
+6 ADD, t7, i_w, t9, 
+7 STO, t9, , i_kk, 
+8 NOT, 4, , t11, 
+9 SHFTL, 7, 2, t12, 
+10 AND, t11, t12, t13, 
+11 OR, 5, t13, t14, 
+12 STO, t14, , i_e, 
+13 STO, 5.3, , f_tr_ty7, 
+14 MUL, 6.99, 10.2, t17, 
+15 ADD, 5.3, t17, t18, 
+16 SUB, t18, 9, t19, 
+17 ADD, t19, 3, t20, 
+18 STO, t20, , f_gkg, 
+19 STO, 5, , i_o, 
+L0: 
+20 NOT_EQ, i_o, i_e, t25, 
+21 JFALSE, L1, t25, 
+22 STO, 5.3, , f_trkk_ty7, 
+L2: 
+23 EQ, i_e, f_oo, t29, 
+24 JFALSE, L3, t29, 
+25 MUL, i_p, i_l, t32, 
+26 ADD, t32, i_w, t34, 
+27 STO, t34, , i_kk, 
+28 JMP, L2, , 
+L3: 
+29 ADD, i_o, 2, t37, 
+30 STO, t37, , i_o, 
+31 JMP, L0, , 
+L1: 
+L4: 
+32 EQ, s_ll, s_en, t41, 
+33 JFALSE, L5, t41, 
+34 ADD, i_o, 2, t43, 
+35 STO, t43, , i_o, 
+36 JMP, L6, , 
+L5: 
+37 SUB, i_o, 66, t46, 
+38 STO, t46, , i_l, 
+L6: 

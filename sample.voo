@@ -3,7 +3,7 @@ var i_hjk=0;
 
 i_hjkkk = 5* 6 / 9  <<  3 ;
 
-
+i_kk = i_p * i_l + i_w;
 
 
 i_e= 5| ~ 4 & 7 << 2;
@@ -14,3 +14,23 @@ f_gkg= 5.3 + 6.99 * 10.2 -9 +3.0;
 
 var s_ee4;
 s_ee = "kklsdakjsl" ;
+
+
+for(i_o=5, i_o!=i_e ) { 
+	
+	const f_trkk_ty7 = 5.3;
+	
+	while(i_e==f_oo){
+		i_kk = i_p * i_l + i_w;
+	}
+	
+} ( i_o=i_o+2);
+
+
+if(s_ll==s_en ){
+	i_o=i_o+2;
+}
+
+else {
+	i_l=i_o-66;
+}

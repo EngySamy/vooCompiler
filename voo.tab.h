@@ -82,18 +82,19 @@ typedef union YYSTYPE
 {
 
 /* Line 1676 of yacc.c  */
-#line 46 "voo.y"
+#line 53 "voo.y"
 
 	int ival;
 	float fval;
 	char * sval;
 	char * idval;
+	bool bval;
 	struct NodeWithType * nodeval;
 
 
 
 /* Line 1676 of yacc.c  */
-#line 97 "voo.tab.h"
+#line 98 "voo.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

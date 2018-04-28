@@ -11,7 +11,9 @@ using namespace std;
 enum IdType { integer , floatt , str , boolean };
 enum oprt {pls , mins , mul , dv , md , pw , b_and , b_or , b_xor , b_not , b_shft_r , b_shft_l ,
 			//logical operators:
-			gt , gte , sm , sme , ne , eq };
+			gt , gte , sm , sme , ne , eq ,
+			//logic comparisons
+			l_and , l_or , l_not };
 enum NodeType {expression, identifier, val};
 struct expr;
 

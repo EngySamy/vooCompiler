@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <map>
+#include <stack>
 
 using namespace std;
 
@@ -20,9 +21,15 @@ extern "C" FILE *yyin;
 void yyerror(const char *s);
 
 Scope mainScope("global");
-map<NodeWithType* , int > nodes;
+map<NodeWithType* , int > nodes;  //after creating id node or expr node we insert it here , to be able to generate quadruples
+stack<int> brLabels;
+stack<int> ifElseLabels;
 
 void generateQuad(string op , NodeWithType * arg1 , NodeWithType * arg2 ,NodeWithType * res );
+void generateBranchQuad(string , int , NodeWithType * );
+void generateLabelPair();
+int generateOneLabel();
+void outLabel(int);
 
 void newSymbolRecord( char *, IdType , bool); 
 bool updateSymbolRecord(char *, bool , NodeWithType* ) ;
@@ -34,7 +41,7 @@ NodeWithType * createNewValueNode(Node *);
 NodeWithType * createNewIdNode(char *);
 NodeWithType * createNewExprNode(oprt, int , NodeWithType *, NodeWithType *);
 
-int cntNodes=0;
+int cntNodes=0,cntLabels=0;
 
 %}
 
@@ -48,6 +55,7 @@ int cntNodes=0;
 	float fval;
 	char * sval;
 	char * idval;
+	bool bval;
 	struct NodeWithType * nodeval;
 }
 
@@ -57,7 +65,8 @@ int cntNodes=0;
 %token <fval> FLOAT
 %token <sval> STRING
 %token <idval> BOOL_ID FLOAT_ID STR_ID INT_ID 
-%token CONST VAR EQUAL TRUE FALSE 
+%token CONST VAR EQUAL 
+%token <bval> TRUE FALSE 
 
 %left LOGIC_OR
 %left LOGIC_AND
@@ -77,7 +86,7 @@ int cntNodes=0;
 
 %token IF ELSE FOR WHILE SWITCH CASE REPEAT UNTIL DEFAULT
 
-%type <nodeval> int_expr float_expr float_int_expr bool_expr compare_opd boolean str_expr
+%type <nodeval> int_expr float_expr float_int_expr bool_expr compare_opd boolean str_expr //bool_term
 
 %%
 // this is the actual grammar that bison will parse
@@ -164,7 +173,10 @@ assignment:
 	STR_ID EQUAL str_expr ';' { 
 				mainScope.printAll();
 				cout<< "ass for string id (var) -> STR_ID: " <<$1<<" with value "<<$3<<endl;}|
-	BOOL_ID EQUAL bool_expr ';' 
+	BOOL_ID EQUAL bool_expr ';' { 
+				generateQuad("STO",$3,NULL,createNewIdNode($1));
+				mainScope.printAll();
+				cout<< "ass for bool id (var) -> BOOL_ID: " <<$1<<" with value "<<$3<<endl;}
 	;
 
 
@@ -225,10 +237,34 @@ str_expr:
 	;
 
 if_else_if_else_stmt:
-	if_stmt else_if_stmt ;
+	if_stmt1 else_if_stmt {
+		outLabel(ifElseLabels.top());  //label after the else stat
+		ifElseLabels.pop();	
+		};
 
+if_stmt1:
+	IF '(' bool_expr ')' '{' stmt '}' { 
+		cout << "if " <<endl;
+		int temp =brLabels.top();
+		brLabels.pop();
+		int label=generateOneLabel(); //label to jump after else
+		ifElseLabels.push(label);
+		generateBranchQuad("JMP",label,NULL);
+		outLabel(temp);
+		brLabels.pop();	
+		}
+	;
+	
 if_stmt:
-	IF '(' bool_expr ')' '{' stmt '}' { cout << "if " <<endl; }
+	IF '(' bool_expr ')' '{' stmt '}' { 
+		cout << "if " <<endl;
+		int temp =brLabels.top();
+		brLabels.pop();
+		int label=ifElseLabels.top(); //label to jump after else
+		generateBranchQuad("JMP",label,NULL);
+		outLabel(temp);
+		brLabels.pop();	
+		}
 	;
 else_if_stmt:
 	ELSE if_stmt else_if_stmt { cout << "else if  " <<endl; } | //sequence of else if 
@@ -237,13 +273,26 @@ else_if_stmt:
 	;
 	
 while_loop:
-	WHILE '(' bool_expr ')' '{' stmt '}' ;
+	WHILE '(' bool_expr ')' '{' stmt '}' {
+		int temp =brLabels.top();
+		brLabels.pop();
+		generateBranchQuad("JMP",brLabels.top(),NULL);
+		outLabel(temp);
+		brLabels.pop();	
+		}
+	;
 	
 for_loop:
-	FOR '(' for_assignment ',' bool_expr ',' for_assignment ')' '{' stmt '}'
+	FOR '(' for_assignment ',' bool_expr ')' '{' stmt '}' '(' for_assignment ')' ';' {
+		int temp =brLabels.top();
+		brLabels.pop();
+		generateBranchQuad("JMP",brLabels.top(),NULL);
+		outLabel(temp);
+		brLabels.pop();}
+	;
 	
 for_assignment:
-	id EQUAL int_expr ;		//To Check here .. int_expr?
+	INT_ID EQUAL int_expr {generateQuad("STO",$3,NULL,createNewIdNode($1));} ;
 	
 repeat_until_loop:
 	REPEAT '{' stmt '}' UNTIL '(' bool_expr ')' ';' ;
@@ -257,29 +306,60 @@ case_stmt:
 	//epsilon
 	;
 	
-bool_expr:
-	compare_opd EQ compare_opd { $$=createNewExprNode(eq,2,$1,$3); generateQuad("COMP",$1,$3,$$); generateQuad("JE",$1,$3,$$); cout << "EQ " <<endl; } | 
-	compare_opd NOT_EQ compare_opd { cout << "NOT_EQ " <<endl; } | 
-	compare_opd GR compare_opd { cout << "GR " <<endl; } | 
-	compare_opd GR_EQ compare_opd { cout << "GR_EQ " <<endl; } | 
-	compare_opd SM compare_opd { cout << "SM " <<endl; } | 
-	compare_opd SM_EQ compare_opd { cout << "SM_EQ " <<endl; } |
-	boolean { cout << "boolean " <<endl; } |
+/*bool_expr:
 	LOGIC_NOT bool_expr { cout << "LOGIC_NOT " <<endl; } |
-	bool_expr LOGIC_AND bool_expr { cout << "LOGIC_AND " <<endl; } | 
+	bool_term LOGIC_AND bool_term { 
+						$$=createNewExprNode(l_and,2,$1,$3);
+						cout<<"And expr"<<endl;
+						generateLabelPair(); 
+						cout<<"pair generated"<<endl;
+						generateQuad("AND",$1,$3,$$);
+						cout<<"and quad"<<endl;
+						generateBranchQuad("JFALSE",brLabels.top(),$$); 						
+						cout << "LOGIC_AND " <<endl; } | 
 	bool_expr LOGIC_OR bool_expr { cout << "LOGIC_OR " <<endl; } |
-	'(' bool_expr ')' { cout << "Brackets " <<endl; }
+	boolean { cout << "boolean " <<endl; } |
+	BOOL_ID { $$=createNewIdNode($1); cout<<"bool id"<<endl; } |
+	bool_term 
+	//'(' bool_expr ')' { cout << "Brackets " <<endl; }
+	;
+*/	
+bool_expr:
+	compare_opd EQ compare_opd { $$=createNewExprNode(eq,2,$1,$3); 
+								generateLabelPair(); 
+								cout<<"EQ expr"<<endl;
+								generateQuad("EQ",$1,$3,$$); 
+								cout<<"EQ quad"<<endl;
+								generateBranchQuad("JFALSE",brLabels.top(),$$); 
+								cout << "EQ " <<endl; } | 
+	compare_opd NOT_EQ compare_opd { $$=createNewExprNode(ne,2,$1,$3); 
+									cout<<"NOT EQ expr"<<endl;
+									generateLabelPair(); 
+									generateQuad("NOT_EQ",$1,$3,$$); 
+									cout<<"NOT EQ quad"<<endl;
+									generateBranchQuad("JFALSE",brLabels.top(),$$); 
+									cout << "NOT_EQ " <<endl; } | 
+	compare_opd GR compare_opd { $$=createNewExprNode(gt,2,$1,$3); generateQuad("GR",$1,$3,$$); cout << "GR " <<endl; } | 
+	compare_opd GR_EQ compare_opd { $$=createNewExprNode(gte,2,$1,$3); generateQuad("GR_EQ",$1,$3,$$); cout << "GR_EQ " <<endl; } | 
+	compare_opd SM compare_opd { $$=createNewExprNode(sm,2,$1,$3); generateQuad("SM",$1,$3,$$); cout << "SM " <<endl; } | 
+	compare_opd SM_EQ compare_opd { $$=createNewExprNode(sme,2,$1,$3); generateQuad("SM_EQ",$1,$3,$$); cout << "SM_EQ " <<endl; } 
 	;
 	
 compare_opd:
-	INT {}| FLOAT {} | STRING {}; //add IDs 
+	INT {}|
+	INT_ID {$$=createNewIdNode($1); cout<<"compare id in bool expr"<<endl;}|
+	FLOAT {} |
+	FLOAT_ID {$$=createNewIdNode($1); cout<<"compare id in bool expr"<<endl;}|
+	STRING {}|
+	STR_ID {$$=createNewIdNode($1); cout<<"compare id in bool expr"<<endl;}; 
 	
 value:
 	INT | FLOAT | STRING | boolean ;
 	
 	
 boolean:
-	TRUE {} | FALSE {};
+	TRUE { $$=createNewValueNode(NewNodeBool($1)); cout<<"bool value"<<endl; } | 
+	FALSE { $$=createNewValueNode(NewNodeBool($1)); cout<<"bool value"<<endl; } ;
 	
 id:
 	INT_ID { cout << " int id " << endl; }
@@ -295,23 +375,23 @@ ofstream quad;
 int lineNo=0;
 
 void outValue(ValueWithType * vt){
-	if(vt->tp==integer) quad << vt->v->iVal << " " ;
-	else if (vt->tp==floatt) quad << vt->v->fVal << " " ;
-	else if (vt->tp==str) quad << vt->v->sVal << " " ;
+	if(vt->tp==integer) quad << vt->v->iVal << ", " ;
+	else if (vt->tp==floatt) quad << vt->v->fVal << ", " ;
+	else if (vt->tp==str) quad << vt->v->sVal << ", " ;
 	else quad << vt->v->bVal << " " ;
 }
 
 void outArg(NodeWithType * arg){
 	if(arg->tp==val) outValue(arg->node->val); //send value with type
-	else if(arg->tp==identifier) quad << arg-> node->id << " " ;
-	else quad << "t" << nodes[arg] <<" ";
+	else if(arg->tp==identifier) quad << arg-> node->id << ", " ;
+	else quad << "t" << nodes[arg] <<", ";
 }
 
 void generateQuad(string op , NodeWithType * arg1 , NodeWithType * arg2 , NodeWithType * res){
-	quad << lineNo << " " << op <<" ";
+	quad << lineNo << " " << op <<", ";
 	outArg(arg1);
 	
-	if(arg2==NULL) quad << " " ;
+	if(arg2==NULL) quad << ", " ;
 	else outArg(arg2);
 	
 	outArg(res);
@@ -319,6 +399,31 @@ void generateQuad(string op , NodeWithType * arg1 , NodeWithType * arg2 , NodeWi
 	quad << endl;	
 	lineNo++;
 	cout<<"quad generated"<<endl;
+}
+
+void generateBranchQuad(string br , int label ,  NodeWithType * cond){
+	quad << lineNo << " " << br <<", L"<<label <<", ";
+	
+	if(cond==NULL) quad << ", " ;
+	else outArg(cond);
+	
+	quad<<endl;
+	lineNo++;
+}
+
+void generateLabelPair(){
+	quad<<"L" <<cntLabels<<": " <<endl;
+	brLabels.push(cntLabels);
+	cntLabels++;
+	brLabels.push(cntLabels);
+	cntLabels++;
+}
+int generateOneLabel(){
+	return cntLabels++;
+}
+
+void outLabel(int label){
+	quad<<"L" <<label<<": " <<endl;
 }
 
 void newSymbolRecord( char * name, IdType ty, bool v_c ){
@@ -404,7 +509,7 @@ NodeWithType * createNewValueNode(Node * nd){
 	NodeWithType * ndt=new NodeWithType();
 	ndt->node=nd;
 	ndt->tp=val;
-	nodes.insert(pair<NodeWithType*,int>(ndt,cntNodes++));
+	//nodes.insert(pair<NodeWithType*,int>(ndt,cntNodes++));
 	return ndt;
 }
 
