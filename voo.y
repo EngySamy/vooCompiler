@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <map>
 #include <stack>
+#include <queue>
 
 using namespace std;
 
@@ -24,6 +25,9 @@ Scope mainScope("global");
 map<NodeWithType* , int > nodes;  //after creating id node or expr node we insert it here , to be able to generate quadruples
 stack<int> brLabels;
 stack<int> ifElseLabels;
+//queue<NodeWithType *> boolQuads;
+//queue<string> boolQuadsOp;
+stack<NodeWithType*> boolRes;
 
 void generateQuad(string op , NodeWithType * arg1 , NodeWithType * arg2 ,NodeWithType * res );
 void generateBranchQuad(string , int , NodeWithType * );
@@ -86,7 +90,7 @@ int cntNodes=0,cntLabels=0;
 
 %token IF ELSE FOR WHILE SWITCH CASE REPEAT UNTIL DEFAULT
 
-%type <nodeval> int_expr float_expr float_int_expr bool_expr compare_opd boolean str_expr //bool_term
+%type <nodeval> int_expr float_expr float_int_expr bool_expr compare_opd boolean str_expr bool_term
 
 %%
 // this is the actual grammar that bison will parse
@@ -243,7 +247,7 @@ if_else_if_else_stmt:
 		};
 
 if_stmt1:
-	IF '(' bool_expr ')' '{' stmt '}' { 
+	IF '(' start_bool_expr bool_expr end_bool_expr ')' '{' stmt '}' { 
 		cout << "if " <<endl;
 		int temp =brLabels.top();
 		brLabels.pop();
@@ -256,7 +260,7 @@ if_stmt1:
 	;
 	
 if_stmt:
-	IF '(' bool_expr ')' '{' stmt '}' { 
+	IF start_while_if bool_expr end_while_if '{' stmt '}' { 
 		cout << "if " <<endl;
 		int temp =brLabels.top();
 		brLabels.pop();
@@ -273,7 +277,7 @@ else_if_stmt:
 	;
 	
 while_loop:
-	WHILE '(' bool_expr ')' '{' stmt '}' {
+	WHILE start_while_if bool_expr end_while_if '{' stmt '}' {
 		int temp =brLabels.top();
 		brLabels.pop();
 		generateBranchQuad("JMP",brLabels.top(),NULL);
@@ -282,14 +286,28 @@ while_loop:
 		}
 	;
 	
+start_while_if:
+	'(' {generateLabelPair();};
+	
+end_while_if:
+	')' {generateBranchQuad("JFALSE",brLabels.top(),boolRes.top()); boolRes.pop();}  ;
+	
 for_loop:
-	FOR '(' for_assignment ',' bool_expr ')' '{' stmt '}' '(' for_assignment ')' ';' {
+	FOR '(' for_assignment ',' start_bool_expr bool_expr end_bool_expr')' '{' stmt '}' '(' for_assignment ')' ';' {
 		int temp =brLabels.top();
 		brLabels.pop();
 		generateBranchQuad("JMP",brLabels.top(),NULL);
 		outLabel(temp);
 		brLabels.pop();}
 	;
+	
+start_bool_expr:
+	//epsilon 
+	{generateLabelPair();};
+	
+end_bool_expr:
+	//epsilon
+	{generateBranchQuad("JFALSE",brLabels.top(),boolRes.top()); boolRes.pop();}  ;
 	
 for_assignment:
 	INT_ID EQUAL int_expr {generateQuad("STO",$3,NULL,createNewIdNode($1));} ;
@@ -306,16 +324,12 @@ case_stmt:
 	//epsilon
 	;
 	
-/*bool_expr:
+bool_expr:
 	LOGIC_NOT bool_expr { cout << "LOGIC_NOT " <<endl; } |
-	bool_term LOGIC_AND bool_term { 
+	bool_expr LOGIC_AND bool_expr { 
 						$$=createNewExprNode(l_and,2,$1,$3);
-						cout<<"And expr"<<endl;
-						generateLabelPair(); 
-						cout<<"pair generated"<<endl;
 						generateQuad("AND",$1,$3,$$);
-						cout<<"and quad"<<endl;
-						generateBranchQuad("JFALSE",brLabels.top(),$$); 						
+						boolRes.push($$); 						
 						cout << "LOGIC_AND " <<endl; } | 
 	bool_expr LOGIC_OR bool_expr { cout << "LOGIC_OR " <<endl; } |
 	boolean { cout << "boolean " <<endl; } |
@@ -323,21 +337,15 @@ case_stmt:
 	bool_term 
 	//'(' bool_expr ')' { cout << "Brackets " <<endl; }
 	;
-*/	
-bool_expr:
-	compare_opd EQ compare_opd { $$=createNewExprNode(eq,2,$1,$3); 
-								generateLabelPair(); 
-								cout<<"EQ expr"<<endl;
-								generateQuad("EQ",$1,$3,$$); 
-								cout<<"EQ quad"<<endl;
-								generateBranchQuad("JFALSE",brLabels.top(),$$); 
+
+
+	
+bool_term:
+	compare_opd EQ compare_opd { $$=createNewExprNode(eq,2,$1,$3); 								 
+								generateQuad("EQ",$1,$3,$$);
 								cout << "EQ " <<endl; } | 
 	compare_opd NOT_EQ compare_opd { $$=createNewExprNode(ne,2,$1,$3); 
-									cout<<"NOT EQ expr"<<endl;
-									generateLabelPair(); 
 									generateQuad("NOT_EQ",$1,$3,$$); 
-									cout<<"NOT EQ quad"<<endl;
-									generateBranchQuad("JFALSE",brLabels.top(),$$); 
 									cout << "NOT_EQ " <<endl; } | 
 	compare_opd GR compare_opd { $$=createNewExprNode(gt,2,$1,$3); generateQuad("GR",$1,$3,$$); cout << "GR " <<endl; } | 
 	compare_opd GR_EQ compare_opd { $$=createNewExprNode(gte,2,$1,$3); generateQuad("GR_EQ",$1,$3,$$); cout << "GR_EQ " <<endl; } | 

@@ -1,20 +1,20 @@
 [main] voo 1000 (0) exception: trapped!
-[main] voo 1000 (0) exception: code 0xC0000005 at 0x403ADF
-[main] voo 1000 (0) exception: ax 0x1FC bx 0x247FA78 cx 0x1FC dx 0x1FC
-[main] voo 1000 (0) exception: si 0x247FA70 di 0x401000 bp 0x247FEF0 sp 0x247F9B4
+[main] voo 1000 (0) exception: code 0xC0000005 at 0x403A7F
+[main] voo 1000 (0) exception: ax 0x1FC bx 0x247FA64 cx 0x1FC dx 0x1FC
+[main] voo 1000 (0) exception: si 0x247FA60 di 0x401000 bp 0x247FEF0 sp 0x247F9B4
 [main] voo 1000 (0) exception: exception is: STATUS_ACCESS_VIOLATION
 [main] voo 1000 (0) stack: Stack trace:
 [main] voo 1000 (0) stack: frame 0: sp = 0x247F3C0, pc = 0x6100A2C3
 [main] voo 1000 (0) stack: frame 1: sp = 0x247F3FC, pc = 0x77D09DF2
 [main] voo 1000 (0) stack: frame 2: sp = 0x247F420, pc = 0x77D09DC4
-[main] voo 1000 (0) stack: frame 3: sp = 0x247F4EC, pc = 0x77CF0CB6
-[main] voo 1000 (0) stack: frame 4: sp = 0x247FEF0, pc = 0x404FC6
+[main] voo 1000 (1) stack: frame 3: sp = 0x247F4EC, pc = 0x77CF0CB6
+[main] voo 1000 (0) stack: frame 4: sp = 0x247FEF0, pc = 0x4050E6
 [main] voo 1000 (0) stack: frame 5: sp = 0x247FF08, pc = 0x61004402
 [main] voo 1000 (0) stack: frame 6: sp = 0x247FF48, pc = 0x61004420
-[main] voo 1000 (0) stack: frame 7: sp = 0x247FF54, pc = 0x421AF2
+[main] voo 1000 (0) stack: frame 7: sp = 0x247FF54, pc = 0x421C92
 [main] voo 1000 (0) stack: frame 8: sp = 0x247FF64, pc = 0x40103A
 [main] voo 1000 (0) stack: frame 9: sp = 0x247FF80, pc = 0x76468654
 [main] voo 1000 (0) stack: frame 10: sp = 0x247FF94, pc = 0x77CE4B17
 [main] voo 1000 (0) stack: frame 11: sp = 0x247FFDC, pc = 0x77CE4AE7
 [main] voo 1000 (0) stack: frame 12: sp = 0x247FFEC, pc = 0x0
-[main] voo 1000 (1) stack: End of stack trace
+[main] voo 1000 (0) stack: End of stack trace

@@ -61,3 +61,14 @@ else if(s_ll == s_kk){
 else {
 	i_l=i_o-66;
 }
+
+
+for(i_o=5, i_o!=i_e ) { 
+	
+	const f_trkk_ty7 = 5.3;
+	
+	while(i_e==f_oo){
+		i_kk = i_p * i_l + i_w;
+	}
+	
+} ( i_o=i_o+2);
