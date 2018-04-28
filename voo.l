@@ -37,6 +37,7 @@ using namespace std;
 "for"		{return FOR;}
 "switch"	{return SWITCH;}
 "case"		{return CASE;}
+"done"		{return DONE;}
 "default"	{return DEFAULT;}
 "repeat"	{return REPEAT;}
 "until"		{return UNTIL;}

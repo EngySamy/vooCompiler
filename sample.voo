@@ -16,23 +16,21 @@ var s_ee4;
 s_ee = "kklsdakjsl" ;
 
 
-for(i_o=5,i_o!=i_e && s_ll != s_ee4 && i_o==i_e && i_o!=i_e ) { 
-	
-	const f_trkk_ty7 = 5.3;
-	
-	
-	
-} ( i_o=i_o+2 );
 
-while( i_o!=i_e && s_ll != s_ee4){
-		i_kk = i_p * i_l + i_w;
+switch(i_hh){
+	case 5:
+		i_ll=8;
 		
-		if(s_ll==s_en && s_ll != s_ee4 ){
-			i_o=i_o+2;
-		}
-
-		else {
-			i_l=i_o-66;
-		}
+		for(i_o=5,i_o!=i_e && i_o==i_e && i_o!=i_e ) { 
+			const f_trkk_ty7 = 5.3;
+		} ( i_o=i_o+2 );
+		done;
+		
+	case 6:
+		i_ll=9;
+		i_o=i_o+2;
+		done;
+		
+	default:
+		i_o=i_o+2;
 }
-

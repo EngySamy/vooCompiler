@@ -25,8 +25,8 @@ Scope mainScope("global");
 map<NodeWithType* , int > nodes;  //after creating id node or expr node we insert it here , to be able to generate quadruples
 stack<int> brLabels;
 stack<int> ifElseLabels;
-//queue<NodeWithType *> boolQuads;
-//queue<string> boolQuadsOp;
+stack<int> switchLabels;
+stack<NodeWithType*> switchIds;
 stack<NodeWithType*> boolRes;
 
 void generateQuad(string op , NodeWithType * arg1 , NodeWithType * arg2 ,NodeWithType * res );
@@ -88,9 +88,9 @@ int cntNodes=0,cntLabels=0;
 %right POW
 %right LOGIC_NOT '~'
 
-%token IF ELSE FOR WHILE SWITCH CASE REPEAT UNTIL DEFAULT
+%token IF ELSE FOR WHILE SWITCH CASE REPEAT UNTIL DEFAULT DONE
 
-%type <nodeval> int_expr float_expr float_int_expr bool_expr compare_opd boolean str_expr bool_term
+%type <nodeval> int_expr float_expr float_int_expr bool_expr compare_opd boolean str_expr bool_term id value
 
 %%
 // this is the actual grammar that bison will parse
@@ -247,7 +247,7 @@ if_else_if_else_stmt:
 		};
 
 if_stmt1:
-	IF '(' start_bool_expr bool_expr end_bool_expr ')' '{' stmt '}' { 
+	IF start_while_if bool_expr end_while_if '{' stmt '}' { 
 		cout << "if " <<endl;
 		int temp =brLabels.top();
 		brLabels.pop();
@@ -293,7 +293,7 @@ end_while_if:
 	')' {generateBranchQuad("JFALSE",brLabels.top(),boolRes.top()); boolRes.pop();}  ;
 	
 for_loop:
-	FOR '(' for_assignment ',' start_bool_expr bool_expr end_bool_expr')' '{' stmt '}' '(' for_assignment ')' ';' {
+	FOR '(' for_assignment ',' start_bool_expr bool_expr end_bool_expr ')' '{' stmt '}' '(' for_assignment ')' ';' {
 		int temp =brLabels.top();
 		brLabels.pop();
 		generateBranchQuad("JMP",brLabels.top(),NULL);
@@ -314,16 +314,9 @@ for_assignment:
 	
 repeat_until_loop:
 	REPEAT '{' stmt '}' UNTIL '(' bool_expr ')' ';' ;
-	
-switch_case:	
-	SWITCH '(' id ')' '{' case_stmt '}' ;
-	
-case_stmt:
-	CASE value ':' stmt case_stmt |
-	DEFAULT ':' stmt |
-	//epsilon
-	;
-	
+
+
+
 bool_expr:
 	LOGIC_NOT bool_expr { cout << "LOGIC_NOT " <<endl; } |
 	bool_expr LOGIC_AND bool_expr { 
@@ -337,7 +330,6 @@ bool_expr:
 	bool_term 
 	//'(' bool_expr ')' { cout << "Brackets " <<endl; }
 	;
-
 
 	
 bool_term:
@@ -360,21 +352,65 @@ compare_opd:
 	FLOAT_ID {$$=createNewIdNode($1); cout<<"compare id in bool expr"<<endl;}|
 	STRING {}|
 	STR_ID {$$=createNewIdNode($1); cout<<"compare id in bool expr"<<endl;}; 
+
+
+	
+switch_case:	
+	start_switch '(' id ')' '{' case_stmts defaultt '}' {
+		outLabel(switchLabels.top());
+		switchLabels.pop();
+	};
+	
+start_switch:
+	SWITCH {
+		int label = generateOneLabel();
+		switchLabels.push(label);
+	};
+
+id:
+	INT_ID { $$=createNewIdNode($1); switchIds.push($$); cout << " int id " << endl; }
+	| FLOAT_ID  { $$=createNewIdNode($1); switchIds.push($$);  cout << " float id " << endl; }
+	| STR_ID  { $$=createNewIdNode($1); switchIds.push($$);  cout << " str id " << endl; }
+	| BOOL_ID  { $$=createNewIdNode($1); switchIds.push($$);  cout << " bool id " << endl; }
+	;
+	
+case_stmts:
+	case_stmt case_stmts |
+	case_stmt
+	;
+	
+case_stmt:
+	CASE value ':' {
+			int l=generateOneLabel();
+			brLabels.push(l);
+			NodeWithType* vv=createNewExprNode(eq,2,switchIds.top(),$2); 
+			generateQuad("EQ",switchIds.top(),$2,vv);
+			generateBranchQuad("JFALSE",brLabels.top(),vv);
+		}
+		stmt done 
+	;
+	
+done:
+	DONE ';' {
+		generateBranchQuad("JMP",switchLabels.top(),NULL);
+		outLabel(brLabels.top());
+		brLabels.pop();
+	};
+	
+defaultt:	
+	DEFAULT ':' stmt ;
 	
 value:
-	INT | FLOAT | STRING | boolean ;
+	INT {$$=createNewValueNode(NewNodeInt($1)); }
+	| FLOAT {$$=createNewValueNode(NewNodeFloat($1)); }
+	| STRING {$$=createNewValueNode(NewNodeString($1)); }
+	| boolean //{$$=createNewValueNode(NewNodeBool($1)); }
+	;
 	
 	
 boolean:
 	TRUE { $$=createNewValueNode(NewNodeBool($1)); cout<<"bool value"<<endl; } | 
 	FALSE { $$=createNewValueNode(NewNodeBool($1)); cout<<"bool value"<<endl; } ;
-	
-id:
-	INT_ID { cout << " int id " << endl; }
-	| FLOAT_ID  { cout << " float id " << endl; }
-	| STR_ID  { cout << " str id " << endl; }
-	| BOOL_ID  { cout << " bool id " << endl; }
-	;
 	
 	
 %%
