@@ -81,7 +81,7 @@ b\_[a-zA-Z\_][a-zA-Z0-9\_]*	{
 	return BOOL_ID;
 }
 
-[a-zA-Z0-9]+      {
+\".*\"      {
 	// we have to copy because we can't rely on yytext not changing underneath us:
 	yylval.sval = strdup(yytext);
 	return STRING;

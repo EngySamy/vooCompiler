@@ -28,6 +28,7 @@ Scope::~Scope() {
 bool Scope::insert(char * sym, SymRec *ptr) {
 	if(symbols.find(sym) == symbols.end()) {
 		symbols[sym] = * ptr;
+		//cout<<"added symbol[  " << sym << " ] = "<< symbols[sym].typ <<endl;
 		return true;
 	} else 
 		return false;
@@ -41,6 +42,7 @@ SymRec *Scope::lookup(char * sym) {
 }
 
 void Scope::printAll(){
+	cout<<"start printing symbol table"<<endl;
 	for (map<char*,SymRec>::iterator it=symbols.begin(); it!=symbols.end(); ++it)
-		cout << it->first << " => type: " << it->second.typ << " , var? : " << it->second.VarConst << " , value : " << it->second.value <<'\n';
+		cout << it->first << " => type: " << it->second.typ << " , var? : " << it->second.VarConst << endl;//" , value : " << (((it->second.value)->node)->val)->v->iVal <<'\n';
 }

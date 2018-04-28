@@ -9,7 +9,9 @@
 using namespace std;
 
 enum IdType { integer , floatt , str , boolean };
-enum oprt {pls , mins , mul , dv , md , pw , b_and , b_or , b_xor , b_not , b_shft_r , b_shft_l};
+enum oprt {pls , mins , mul , dv , md , pw , b_and , b_or , b_xor , b_not , b_shft_r , b_shft_l ,
+			//logical operators:
+			gt , gte , sm , sme , ne , eq };
 enum NodeType {expression, identifier, val};
 struct expr;
 
@@ -20,10 +22,15 @@ union Value{
 	char * sVal;
 };
 
+struct ValueWithType {
+	Value * v;
+	IdType tp;
+};
+
 union Node {  //the node can have expression or actual value or identifier
 	expr * exp;
 	char * id;
-	Value * val;
+	ValueWithType * val;
 };
 
 struct NodeWithType{
@@ -42,7 +49,7 @@ struct expr{
 struct SymRec {
 	IdType typ;
 	bool VarConst; // var or constant
-	NodeWithType * value;
+	//NodeWithType * value;
 };
 
 class Scope {

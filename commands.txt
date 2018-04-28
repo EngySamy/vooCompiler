@@ -1,0 +1,4 @@
+bison -d voo.y
+flex voo.l
+g++ voo.tab.c lex.yy.c sym.cpp -lfl -o voo
+voo

@@ -24,9 +24,12 @@ map<NodeWithType* , int > nodes;
 
 void generateQuad(string op , NodeWithType * arg1 , NodeWithType * arg2 ,NodeWithType * res );
 
-void newSymbolRecord( char *, IdType , bool , NodeWithType * ); 
+void newSymbolRecord( char *, IdType , bool); 
+bool updateSymbolRecord(char *, bool , NodeWithType* ) ;
 Node * NewNodeFloat(float );
 Node * NewNodeInt(int);
+Node * NewNodeString(char *);
+Node * NewNodeBool(bool);
 NodeWithType * createNewValueNode(Node *);
 NodeWithType * createNewIdNode(char *);
 NodeWithType * createNewExprNode(oprt, int , NodeWithType *, NodeWithType *);
@@ -54,7 +57,7 @@ int cntNodes=0;
 %token <fval> FLOAT
 %token <sval> STRING
 %token <idval> BOOL_ID FLOAT_ID STR_ID INT_ID 
-%token CONST VAR EQUAL TRUE FALSE  //TYPE_FLOAT TYPE_INT TYPE_STRING TYPE_BOOL
+%token CONST VAR EQUAL TRUE FALSE 
 
 %left LOGIC_OR
 %left LOGIC_AND
@@ -74,50 +77,93 @@ int cntNodes=0;
 
 %token IF ELSE FOR WHILE SWITCH CASE REPEAT UNTIL DEFAULT
 
-%type <nodeval> int_expr float_expr float_int_expr
-//%type <fval> float_expr
-//%type <sval> str_expr
+%type <nodeval> int_expr float_expr float_int_expr bool_expr compare_opd boolean str_expr
 
 %%
-// this is the actual grammar that bison will parse, but for right now it's just
-// something silly to echo to the screen what bison gets from flex.  We'll
-// make a real one shortly:
+// this is the actual grammar that bison will parse
 
 stmt:
 	variable stmt | constant_stmt stmt | assignment stmt | if_else_if_else_stmt stmt | for_loop stmt | while_loop stmt | repeat_until_loop stmt | switch_case stmt |
 	variable | constant_stmt | assignment | if_else_if_else_stmt | for_loop | while_loop | repeat_until_loop | switch_case ;
-variable: 
-	VAR id ';' ;
 
+/*declaration:
+	variable | constant_stmt ;
+	*/
+variable: 
+	VAR id1 ';' |
+	VAR decl_assign 
+	;
+id1:
+	INT_ID { 
+			newSymbolRecord($1,integer,true);
+			mainScope.printAll();
+			cout<< "ass for int id (var) -> INT_ID: " <<$1<<endl;} |
+	FLOAT_ID  { 
+			newSymbolRecord($1,floatt,true);
+			mainScope.printAll();
+			cout<< "ass for float id (var) -> FLOAT_ID: " <<$1<<endl;}|
+	STR_ID  { 
+			newSymbolRecord($1,str,true);
+			mainScope.printAll();
+			cout<< "ass for string id (var) -> STR_ID: " <<$1<<endl;}|
+	BOOL_ID  { cout << " bool id " << endl; }
+	;
+
+decl_assign:	
+	INT_ID EQUAL int_expr ';' { 
+				newSymbolRecord($1,integer,true);
+				generateQuad("STO",$3,NULL,createNewIdNode($1));
+				mainScope.printAll();
+				cout<< "ass for int id (var) -> INT_ID: " <<$1<<" with value "<<$3<<endl;} |
+	FLOAT_ID EQUAL float_int_expr ';' { 
+				newSymbolRecord($1,floatt,true);
+				generateQuad("STO",$3,NULL,createNewIdNode($1));
+				mainScope.printAll();
+				cout<< "ass for float id (var) -> FLOAT_ID: " <<$1<<" with value "<<$3<<endl;}|
+	STR_ID EQUAL str_expr ';' { 
+				newSymbolRecord($1,str,true);
+				mainScope.printAll();
+				cout<< "ass for string id (var) -> STR_ID: " <<$1<<" with value "<<$3<<endl;}|
+	BOOL_ID EQUAL bool_expr ';' 
+	;
 	
 constant_stmt:
 	CONST constant;
 	
 constant:
 	INT_ID EQUAL INT ';' { cout << "const int id " << endl;
-								newSymbolRecord($1,integer,false, createNewValueNode(NewNodeInt($3)) );
+								NodeWithType* nt=createNewValueNode(NewNodeInt($3));
+								newSymbolRecord($1,integer,false);
+								generateQuad("STO",nt,NULL,createNewIdNode($1));
 								mainScope.printAll();
 								cout<< "ass for int id (const) -> INT_ID: " <<$1<<" with value "<<$3<<endl;}  |
 	FLOAT_ID EQUAL FLOAT ';' { cout << "const float id " << endl;
-								newSymbolRecord($1,floatt,false, createNewValueNode(NewNodeFloat($3)) );
+								NodeWithType* nt=createNewValueNode(NewNodeFloat($3));
+								newSymbolRecord($1,floatt,false);
+								generateQuad("STO",nt,NULL,createNewIdNode($1));
 								mainScope.printAll();
-								cout<< "ass for int id (const) -> INT_ID: " <<$1<<" with value "<<$3<<endl;}|
-	STR_ID EQUAL STRING ';' { cout << "const str id " << endl; } |
+								cout<< "ass for float id (const) -> FLOAT_ID: " <<$1<<" with value "<<$3<<endl;}|
+	STR_ID EQUAL STRING ';' { cout << "const str id " << endl; 
+								NodeWithType* nt=createNewValueNode(NewNodeString($3));
+								newSymbolRecord($1,str,false);
+								generateQuad("STO",nt,NULL,createNewIdNode($1));
+								mainScope.printAll();
+								cout<< "ass for str id (const) -> STR_ID: " <<$1<<" with value "<<$3<<endl;}|
 	BOOL_ID EQUAL boolean ';' { cout << "const bool id " << endl; }
 	;
 	
 assignment:
 	INT_ID EQUAL int_expr ';' { 
-				newSymbolRecord($1,integer,true,$3);
-				//generateQuad("Sto",$3,NULL,$1);
+				generateQuad("STO",$3,NULL,createNewIdNode($1));
 				mainScope.printAll();
 				cout<< "ass for int id (var) -> INT_ID: " <<$1<<" with value "<<$3<<endl;} |
 	FLOAT_ID EQUAL float_int_expr ';' { 
-				newSymbolRecord($1,floatt,true,$3);
-				//generateQuad("Sto",$3,NULL,$1);
+				generateQuad("STO",$3,NULL,createNewIdNode($1));
 				mainScope.printAll();
-				cout<< "ass for float id (var) -> INT_ID: " <<$1<<" with value "<<$3<<endl;}|
-	STR_ID EQUAL str_expr ';' |
+				cout<< "ass for float id (var) -> FLOAT_ID: " <<$1<<" with value "<<$3<<endl;}|
+	STR_ID EQUAL str_expr ';' { 
+				mainScope.printAll();
+				cout<< "ass for string id (var) -> STR_ID: " <<$1<<" with value "<<$3<<endl;}|
 	BOOL_ID EQUAL bool_expr ';' 
 	;
 
@@ -164,7 +210,7 @@ float_expr:
 	int_expr '%' float_expr { $$=createNewExprNode(md,2,$1,$3);  generateQuad("MOD",$1,$3,$$);cout << "MOD: " << $$ << endl; }| 
 	int_expr POW float_expr { $$=createNewExprNode(pw,2,$1,$3);  generateQuad("POW",$1,$3,$$);cout << "POW: " << $$ << endl; }| 
 	
-	'(' float_expr ')' { cout << "Brackets  " <<endl; } | //<< $$=$2 
+	//'(' float_expr ')' { cout << "Brackets  " <<endl; } |
 	FLOAT { $$=createNewValueNode(NewNodeFloat($1)); cout<<"float value"<<endl; }  | 
 	FLOAT_ID  { $$=createNewIdNode($1); cout<<"float id "<<endl;}
 	;
@@ -173,8 +219,9 @@ float_int_expr:
 	float_expr | int_expr ;
 	
 str_expr:
-	str_expr '+' str_expr |
-	STRING //| STR_ID
+	//str_expr '+' str_expr {$$=createNewExprNode(concat,2,$1,$3); generateQuad("ADD",$1,$3,$$); cout << "PLUS: " << $$ <<endl; }|
+	STRING { $$=createNewValueNode(NewNodeString($1)); cout<<"string value"<<endl; }  |  
+	STR_ID { $$=createNewIdNode($1); cout<<"string id"<<endl; }
 	;
 
 if_else_if_else_stmt:
@@ -211,7 +258,7 @@ case_stmt:
 	;
 	
 bool_expr:
-	compare_opd EQ compare_opd { cout << "EQ " <<endl; } | 
+	compare_opd EQ compare_opd { $$=createNewExprNode(eq,2,$1,$3); generateQuad("COMP",$1,$3,$$); generateQuad("JE",$1,$3,$$); cout << "EQ " <<endl; } | 
 	compare_opd NOT_EQ compare_opd { cout << "NOT_EQ " <<endl; } | 
 	compare_opd GR compare_opd { cout << "GR " <<endl; } | 
 	compare_opd GR_EQ compare_opd { cout << "GR_EQ " <<endl; } | 
@@ -225,14 +272,14 @@ bool_expr:
 	;
 	
 compare_opd:
-	 INT | FLOAT | STRING ; //add IDs 
+	INT {}| FLOAT {} | STRING {}; //add IDs 
 	
 value:
 	INT | FLOAT | STRING | boolean ;
 	
 	
 boolean:
-	TRUE | FALSE;
+	TRUE {} | FALSE {};
 	
 id:
 	INT_ID { cout << " int id " << endl; }
@@ -247,38 +294,72 @@ id:
 ofstream quad;
 int lineNo=0;
 
+void outValue(ValueWithType * vt){
+	if(vt->tp==integer) quad << vt->v->iVal << " " ;
+	else if (vt->tp==floatt) quad << vt->v->fVal << " " ;
+	else if (vt->tp==str) quad << vt->v->sVal << " " ;
+	else quad << vt->v->bVal << " " ;
+}
+
+void outArg(NodeWithType * arg){
+	if(arg->tp==val) outValue(arg->node->val); //send value with type
+	else if(arg->tp==identifier) quad << arg-> node->id << " " ;
+	else quad << "t" << nodes[arg] <<" ";
+}
+
 void generateQuad(string op , NodeWithType * arg1 , NodeWithType * arg2 , NodeWithType * res){
 	quad << lineNo << " " << op <<" ";
-	if(arg1->tp==val) quad << arg1->node->val->iVal << " " ;
-	else if(arg1->tp==identifier) quad << arg1-> node->id << " " ;
-	else quad << "t" << nodes[arg1] <<" ";
+	outArg(arg1);
 	
 	if(arg2==NULL) quad << " " ;
-	else if(arg2->tp==val) quad << arg2->node->val->iVal << " " ;
-	else if(arg2->tp==identifier) quad << arg2-> node->id << " " ;
-	else quad << "t" << nodes[arg2] <<" ";
+	else outArg(arg2);
 	
-	if(res->tp==val) quad << res->node->val->iVal << " " ;
-	else if(res->tp==identifier) quad << res-> node->id << " " ;
-	else quad << "t" << nodes[res] <<" ";
+	outArg(res);
 	
 	quad << endl;	
 	lineNo++;
+	cout<<"quad generated"<<endl;
 }
 
-void newSymbolRecord( char * name, IdType ty, bool v_c , NodeWithType* vlu ){
+void newSymbolRecord( char * name, IdType ty, bool v_c ){
 	SymRec rec ;
 	rec.typ=ty;
 	rec.VarConst=v_c;
-	rec.value=vlu;
+	//rec.value=vlu;
 	mainScope.insert(name,&rec); 
 }
 
-Node * NewNodeInt(int i){
+/*bool updateSymbolRecord(char * name, bool v_c , NodeWithType* vlu  ) {
+	//check if it's var not const
+	if(v_c){
+		//check if it exists
+		SymRec * oldRec=mainScope.lookup(name);
+		if(oldRec!=NULL){ //update
+			//oldRec->typ=ty;
+			//oldRec->VarConst=v_c;
+			oldRec->value=vlu;
+			//mainScope.insert(name,&rec);
+			return true;
+		}
+		else {//handle error -> this variable doesn't exist 
+			cout<<"variable doesn't exist" <<endl;
+			return false;
+		}
+	}
+	else {//handle error -> this is not a variable  
+		cout<<"Constant can't be modified" <<endl;
+		return false;
+	}
+}*/
+
+Node * NewNodeInt(int i){  //create new node and new value and assign this value to a new ValueWithType then assign this ValueWithType to the node  
 	Node * nd=new Node();
 	Value * v=new Value();
 	v->iVal=i;
-	nd->val=v;
+	ValueWithType * vt= new ValueWithType();
+	vt->v=v;
+	vt->tp=integer;
+	nd->val=vt;
 	cout<<"new value node created"<<endl;
 	return nd;
 }
@@ -287,7 +368,34 @@ Node * NewNodeFloat(float i){
 	Node * nd=new Node();
 	Value * v=new Value();
 	v->fVal=i;
-	nd->val=v;
+	ValueWithType * vt= new ValueWithType();
+	vt->v=v;
+	vt->tp=floatt;
+	nd->val=vt;
+	cout<<"new value node created"<<endl;
+	return nd;
+}
+
+Node * NewNodeString(char * i){
+	Node * nd=new Node();
+	Value * v=new Value();
+	v->sVal=i;
+	ValueWithType * vt= new ValueWithType();
+	vt->v=v;
+	vt->tp=str;
+	nd->val=vt;
+	cout<<"new value node created"<<endl;
+	return nd;
+}
+
+Node * NewNodeBool(bool i){
+	Node * nd=new Node();
+	Value * v=new Value();
+	v->bVal=i;
+	ValueWithType * vt= new ValueWithType();
+	vt->v=v;
+	vt->tp=boolean;
+	nd->val=vt;
 	cout<<"new value node created"<<endl;
 	return nd;
 }
@@ -339,9 +447,7 @@ int main(int, char**) {
 	yyin = myfile;
 	
 	//create a file to write the quadruples in 
-	
 	quad.open ("quad.txt");
-	
 	
 	// parse through the input until there is no more:
 	do {
