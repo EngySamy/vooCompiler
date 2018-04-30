@@ -144,45 +144,41 @@ constant_stmt:
 	CONST constant;
 	
 constant:
-	INT_ID EQUAL INT ';' { cout << "const int id " << endl;
-								NodeWithType* nt=createNewValueNode(NewNodeInt($3));
-								newSymbolRecord($1,integer,false);
-								generateQuad("STO",nt,NULL,createNewIdNode($1));
-								mainScope.printAll();
-								cout<< "ass for int id (const) -> INT_ID: " <<$1<<" with value "<<$3<<endl;}  |
-	FLOAT_ID EQUAL FLOAT ';' { cout << "const float id " << endl;
-								NodeWithType* nt=createNewValueNode(NewNodeFloat($3));
-								newSymbolRecord($1,floatt,false);
-								generateQuad("STO",nt,NULL,createNewIdNode($1));
-								mainScope.printAll();
-								cout<< "ass for float id (const) -> FLOAT_ID: " <<$1<<" with value "<<$3<<endl;}|
-	STR_ID EQUAL STRING ';' { cout << "const str id " << endl; 
-								NodeWithType* nt=createNewValueNode(NewNodeString($3));
-								newSymbolRecord($1,str,false);
-								generateQuad("STO",nt,NULL,createNewIdNode($1));
-								mainScope.printAll();
-								cout<< "ass for str id (const) -> STR_ID: " <<$1<<" with value "<<$3<<endl;}|
+	INT_ID EQUAL INT ';' { 
+							NodeWithType* nt=createNewValueNode(NewNodeInt($3));
+							newSymbolRecord($1,integer,false);
+							generateQuad("STO",nt,NULL,createNewIdNode($1));
+							mainScope.printAll();
+							cout<< "ass for int id (const) -> INT_ID: " <<$1<<" with value "<<$3<<endl;}  |
+	FLOAT_ID EQUAL FLOAT ';' { 
+							NodeWithType* nt=createNewValueNode(NewNodeFloat($3));
+							newSymbolRecord($1,floatt,false);
+							generateQuad("STO",nt,NULL,createNewIdNode($1));
+							mainScope.printAll();
+							cout<< "ass for float id (const) -> FLOAT_ID: " <<$1<<" with value "<<$3<<endl;}|
+	STR_ID EQUAL STRING ';' {
+							NodeWithType* nt=createNewValueNode(NewNodeString($3));
+							newSymbolRecord($1,str,false);
+							generateQuad("STO",nt,NULL,createNewIdNode($1));
+							mainScope.printAll();
+							cout<< "ass for str id (const) -> STR_ID: " <<$1<<" with value "<<$3<<endl;}|
 	BOOL_ID EQUAL boolean ';' { cout << "const bool id " << endl; }
 	;
 	
 assignment:
 	INT_ID EQUAL int_expr ';' { 
 				generateQuad("STO",$3,NULL,createNewIdNode($1));
-				mainScope.printAll();
 				cout<< "ass for int id (var) -> INT_ID: " <<$1<<" with value "<<$3<<endl;} |
 	FLOAT_ID EQUAL float_int_expr ';' { 
 				generateQuad("STO",$3,NULL,createNewIdNode($1));
-				mainScope.printAll();
 				cout<< "ass for float id (var) -> FLOAT_ID: " <<$1<<" with value "<<$3<<endl;}|
 	STR_ID EQUAL str_expr ';' { 
-				mainScope.printAll();
 				cout<< "ass for string id (var) -> STR_ID: " <<$1<<" with value "<<$3<<endl;}|
 	BOOL_ID EQUAL bool_expr ';' { 
-				generateQuad("STO",$3,NULL,createNewIdNode($1));
-				mainScope.printAll();
+				generateQuad("STO",boolRes.top(),NULL,createNewIdNode($1));
+				boolRes.pop();
 				cout<< "ass for bool id (var) -> BOOL_ID: " <<$1<<" with value "<<$3<<endl;}
 	;
-
 
 
 int_expr:
@@ -199,7 +195,7 @@ int_expr:
 	int_expr BITWISE_SHIFT_LEFT int_expr { $$=createNewExprNode(b_shft_r,2,$1,$3); generateQuad("SHFTL",$1,$3,$$); cout << "BITWISE_SHIFT_LEFT: " <<endl; } | //<< $$=$1<<$3 
 	int_expr BITWISE_SHIFT_RIGHT int_expr { $$=createNewExprNode(b_shft_l,2,$1,$3); generateQuad("SHFTR",$1,$3,$$); cout << "BITWISE_SHIFT_RIGHT: " <<endl; } |  //<< $$=$1>>$3 
 	
-	//'(' int_expr ')' { cout << "Brackets  " <<endl; } | //<< $$=$2
+	'(' int_expr ')' { $$=$2;	cout << "Brackets  " <<endl; } | 
 	INT { $$=createNewValueNode(NewNodeInt($1)); cout<<"int value"<<endl; } |
 	INT_ID { $$=createNewIdNode($1); cout<<"int id "<<endl;}
 	;
@@ -226,7 +222,7 @@ float_expr:
 	int_expr '%' float_expr { $$=createNewExprNode(md,2,$1,$3);  generateQuad("MOD",$1,$3,$$);cout << "MOD: " << $$ << endl; }| 
 	int_expr POW float_expr { $$=createNewExprNode(pw,2,$1,$3);  generateQuad("POW",$1,$3,$$);cout << "POW: " << $$ << endl; }| 
 	
-	//'(' float_expr ')' { cout << "Brackets  " <<endl; } |
+	'(' float_expr ')' { $$=$2; cout << "Brackets  " <<endl; } |
 	FLOAT { $$=createNewValueNode(NewNodeFloat($1)); cout<<"float value"<<endl; }  | 
 	FLOAT_ID  { $$=createNewIdNode($1); cout<<"float id "<<endl;}
 	;
@@ -235,7 +231,6 @@ float_int_expr:
 	float_expr | int_expr ;
 	
 str_expr:
-	//str_expr '+' str_expr {$$=createNewExprNode(concat,2,$1,$3); generateQuad("ADD",$1,$3,$$); cout << "PLUS: " << $$ <<endl; }|
 	STRING { $$=createNewValueNode(NewNodeString($1)); cout<<"string value"<<endl; }  |  
 	STR_ID { $$=createNewIdNode($1); cout<<"string id"<<endl; }
 	;
@@ -244,7 +239,7 @@ if_else_if_else_stmt:
 	if_stmt1 else_if_stmt {
 		outLabel(ifElseLabels.top());  //label after the else stat
 		ifElseLabels.pop();	
-		};
+	};
 
 if_stmt1:
 	IF start_while_if bool_expr end_while_if '{' stmt '}' { 
@@ -313,7 +308,12 @@ for_assignment:
 	INT_ID EQUAL int_expr {generateQuad("STO",$3,NULL,createNewIdNode($1));} ;
 	
 repeat_until_loop:
-	REPEAT '{' stmt '}' UNTIL '(' bool_expr ')' ';' ;
+	{int label=generateOneLabel(); outLabel(label); brLabels.push(label);}
+	REPEAT '{' stmt '}' UNTIL '(' bool_expr ')' ';' {
+		generateBranchQuad("JTRUE",brLabels.top(),boolRes.top()); 
+		boolRes.pop();
+		brLabels.pop();
+	};
 
 
 
@@ -327,18 +327,14 @@ bool_expr:
 	bool_expr LOGIC_OR bool_expr { cout << "LOGIC_OR " <<endl; } |
 	boolean { cout << "boolean " <<endl; } |
 	BOOL_ID { $$=createNewIdNode($1); cout<<"bool id"<<endl; } |
-	bool_term 
-	//'(' bool_expr ')' { cout << "Brackets " <<endl; }
+	bool_term {}|
+	'(' bool_expr ')' { $$=$2;  cout << "Brackets " <<endl; }
 	;
 
 	
 bool_term:
-	compare_opd EQ compare_opd { $$=createNewExprNode(eq,2,$1,$3); 								 
-								generateQuad("EQ",$1,$3,$$);
-								cout << "EQ " <<endl; } | 
-	compare_opd NOT_EQ compare_opd { $$=createNewExprNode(ne,2,$1,$3); 
-									generateQuad("NOT_EQ",$1,$3,$$); 
-									cout << "NOT_EQ " <<endl; } | 
+	compare_opd EQ compare_opd { $$=createNewExprNode(eq,2,$1,$3); generateQuad("EQ",$1,$3,$$); cout << "EQ " <<endl; } | 
+	compare_opd NOT_EQ compare_opd { $$=createNewExprNode(ne,2,$1,$3); generateQuad("NOT_EQ",$1,$3,$$); cout << "NOT_EQ " <<endl; } | 
 	compare_opd GR compare_opd { $$=createNewExprNode(gt,2,$1,$3); generateQuad("GR",$1,$3,$$); cout << "GR " <<endl; } | 
 	compare_opd GR_EQ compare_opd { $$=createNewExprNode(gte,2,$1,$3); generateQuad("GR_EQ",$1,$3,$$); cout << "GR_EQ " <<endl; } | 
 	compare_opd SM compare_opd { $$=createNewExprNode(sm,2,$1,$3); generateQuad("SM",$1,$3,$$); cout << "SM " <<endl; } | 
@@ -346,13 +342,13 @@ bool_term:
 	;
 	
 compare_opd:
-	INT {}|
-	INT_ID {$$=createNewIdNode($1); cout<<"compare id in bool expr"<<endl;}|
-	FLOAT {} |
-	FLOAT_ID {$$=createNewIdNode($1); cout<<"compare id in bool expr"<<endl;}|
-	STRING {}|
-	STR_ID {$$=createNewIdNode($1); cout<<"compare id in bool expr"<<endl;}; 
-
+	INT {$$=createNewValueNode(NewNodeInt($1));}|
+	INT_ID {$$=createNewIdNode($1);}|
+	FLOAT {$$=createNewValueNode(NewNodeFloat($1)); } |
+	FLOAT_ID {$$=createNewIdNode($1);}|
+	STRING {$$=createNewValueNode(NewNodeString($1));}|
+	STR_ID {$$=createNewIdNode($1);}
+	; 
 
 	
 switch_case:	
@@ -409,8 +405,8 @@ value:
 	
 	
 boolean:
-	TRUE { $$=createNewValueNode(NewNodeBool($1)); cout<<"bool value"<<endl; } | 
-	FALSE { $$=createNewValueNode(NewNodeBool($1)); cout<<"bool value"<<endl; } ;
+	TRUE { $$=createNewValueNode(NewNodeBool($1)); /*cout<<"bool value"<<endl;*/ } | 
+	FALSE { $$=createNewValueNode(NewNodeBool($1)); /*cout<<"bool value"<<endl;*/ } ;
 	
 	
 %%
@@ -509,7 +505,7 @@ Node * NewNodeInt(int i){  //create new node and new value and assign this value
 	vt->v=v;
 	vt->tp=integer;
 	nd->val=vt;
-	cout<<"new value node created"<<endl;
+	//cout<<"new value node created"<<endl;
 	return nd;
 }
 
@@ -521,7 +517,7 @@ Node * NewNodeFloat(float i){
 	vt->v=v;
 	vt->tp=floatt;
 	nd->val=vt;
-	cout<<"new value node created"<<endl;
+	//cout<<"new value node created"<<endl;
 	return nd;
 }
 
@@ -533,7 +529,7 @@ Node * NewNodeString(char * i){
 	vt->v=v;
 	vt->tp=str;
 	nd->val=vt;
-	cout<<"new value node created"<<endl;
+	//cout<<"new value node created"<<endl;
 	return nd;
 }
 
@@ -545,7 +541,7 @@ Node * NewNodeBool(bool i){
 	vt->v=v;
 	vt->tp=boolean;
 	nd->val=vt;
-	cout<<"new value node created"<<endl;
+	//cout<<"new value node created"<<endl;
 	return nd;
 }
 
@@ -560,7 +556,7 @@ NodeWithType * createNewValueNode(Node * nd){
 NodeWithType * createNewIdNode(char* idd){
 	Node * nd=new Node();
 	nd->id=idd;
-	cout<<"new id node created"<<endl;
+	//cout<<"new id node created"<<endl;
 	NodeWithType * ndt=new NodeWithType();
 	ndt->node=nd;
 	ndt->tp=identifier;
@@ -576,7 +572,7 @@ NodeWithType * createNewExprNode(oprt op, int n, NodeWithType* oprd1, NodeWithTy
 	ex->opds[1]=oprd2;
 	Node * nd=new Node();
 	nd->exp=ex;
-	cout<<"new expr node created"<<endl;
+	//cout<<"new expr node created"<<endl;
 	NodeWithType * ndt=new NodeWithType();
 	ndt->node=nd;
 	ndt->tp=expression;

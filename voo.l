@@ -87,6 +87,6 @@ b\_[a-zA-Z\_][a-zA-Z0-9\_]*	{
 	yylval.sval = strdup(yytext);
 	return STRING;
 }
-
+$$.*\\n  ; //comment
 
 %%

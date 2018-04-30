@@ -1,11 +1,11 @@
 var i_hjk=0;
 
+i_hjkkk = 5* (6 / 9)  <<  3 ;
+$$this is a comment
 
-i_hjkkk = 5* 6 / 9  <<  3 ;
+i_kk = i_p * (i_l + i_w);
 
-i_kk = i_p * i_l + i_w;
-
-
+b_x=f_o<f_e && (i_o>=i_e && i_o<=i_e);
 i_e= 5| ~ 4 & 7 << 2;
 
 var f_gkg;
@@ -34,3 +34,7 @@ switch(i_hh){
 	default:
 		i_o=i_o+2;
 }
+
+repeat {
+	i_ll=9;
+}until(f_o==f_e && (i_o!=i_e && i_o==i_e) );
