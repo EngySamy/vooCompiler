@@ -35,10 +35,18 @@ bool Scope::insert(char * sym, SymRec *ptr) {
 }
 
 SymRec *Scope::lookup(char * sym) {
-	if(symbols.find(sym) != symbols.end()) {
+	/*if(symbols.find(sym) != symbols.end()) {
 		return &symbols[sym];
 	} else
 		return NULL;
+	*/
+	string symm(sym);
+	for (map<char*,SymRec>::iterator it=symbols.begin(); it!=symbols.end(); ++it){
+		string current(it->first);
+		if(symm==current)
+			return &symbols[sym];
+	}
+	return NULL;
 }
 
 void Scope::printAll(){

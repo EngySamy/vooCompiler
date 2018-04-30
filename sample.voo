@@ -1,6 +1,5 @@
 var i_hjk=0;
 
-i_hjkkk = 5* (6 / 9)  <<  3 ;
 $$this is a comment
 
 i_kk = i_p * (i_l + i_w);
@@ -14,27 +13,35 @@ f_gkg= 5.3 + 6.99 * 10.2 -9 +3.0;
 
 var s_ee4;
 s_ee = "kklsdakjsl" ;
+var i_o;
+var i_e;
 
 
 
-switch(i_hh){
-	case 5:
-		i_ll=8;
-		
-		for(i_o=5,i_o!=i_e && i_o==i_e && i_o!=i_e ) { 
-			const f_trkk_ty7 = 5.3;
-		} ( i_o=i_o+2 );
-		done;
-		
-	case 6:
-		i_ll=9;
-		i_o=i_o+2;
-		done;
-		
-	default:
-		i_o=i_o+2;
+
+var i_hjk;
+var b_llll;
+
+var s_yy="kkk6565*-*sdasd";
+var b_llll=true;
+var s_yy;
+
+i_hjkkk = 5* (6 / 9)  <<  3 ;
+
+while(i_e==f_oo && s_ll != s_ee4){
+		i_kk = 5| ~ 4 & 7 << 2;
 }
 
-repeat {
-	i_ll=9;
-}until(f_o==f_e && (i_o!=i_e && i_o==i_e) );
+var i_e;
+var f_oo;
+
+while(i_e==f_oo && s_ll != s_ee4){
+		i_kk = 5| ~ 4 & 7 << 2;
+}
+
+var s_ee4;
+var i_kk;
+var s_ll;
+while(i_e==f_oo && s_ll != s_ee4){
+		i_kk = 5| ~ 4 & 7 << 2;
+}

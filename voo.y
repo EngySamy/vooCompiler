@@ -37,6 +37,11 @@ void outLabel(int);
 
 void newSymbolRecord( char *, IdType , bool); 
 bool updateSymbolRecord(char *, bool , NodeWithType* ) ;
+//bool searchSymbolRecord( char * );
+void errorExistsBefore(char *);
+void errorDoesntExist(char *);
+
+
 Node * NewNodeFloat(float );
 Node * NewNodeInt(int);
 Node * NewNodeString(char *);
@@ -108,36 +113,83 @@ variable:
 	;
 id1:
 	INT_ID { 
-			newSymbolRecord($1,integer,true);
-			mainScope.printAll();
-			cout<< "ass for int id (var) -> INT_ID: " <<$1<<endl;} |
-	FLOAT_ID  { 
-			newSymbolRecord($1,floatt,true);
-			mainScope.printAll();
-			cout<< "ass for float id (var) -> FLOAT_ID: " <<$1<<endl;}|
+				if(mainScope.lookup($1)==NULL){
+					newSymbolRecord($1,integer,true);
+					mainScope.printAll();
+					cout<< "ass for int id (var) -> INT_ID: " <<$1<<endl;
+				}
+				else errorExistsBefore($1);
+			} |
+	FLOAT_ID  {
+				if(mainScope.lookup($1)==NULL){
+					newSymbolRecord($1,floatt,true);
+					mainScope.printAll();
+					cout<< "ass for float id (var) -> FLOAT_ID: " <<$1<<endl;
+				}
+				else errorExistsBefore($1);
+			  } |
 	STR_ID  { 
-			newSymbolRecord($1,str,true);
-			mainScope.printAll();
-			cout<< "ass for string id (var) -> STR_ID: " <<$1<<endl;}|
-	BOOL_ID  { cout << " bool id " << endl; }
+				if(mainScope.lookup($1)==NULL){
+					newSymbolRecord($1,str,true);
+					mainScope.printAll();
+					cout<< "ass for string id (var) -> STR_ID: " <<$1<<endl;
+				}
+				else errorExistsBefore($1);
+			} |
+	BOOL_ID  { 
+				if(mainScope.lookup($1)==NULL){
+					newSymbolRecord($1,boolean,true);
+					mainScope.printAll();
+					cout<< "ass for bool id (var) -> BOOL_ID: " <<$1<<endl;
+				}
+				else errorExistsBefore($1);
+			}
 	;
 
 decl_assign:	
 	INT_ID EQUAL int_expr ';' { 
-				newSymbolRecord($1,integer,true);
-				generateQuad("STO",$3,NULL,createNewIdNode($1));
-				mainScope.printAll();
-				cout<< "ass for int id (var) -> INT_ID: " <<$1<<" with value "<<$3<<endl;} |
-	FLOAT_ID EQUAL float_int_expr ';' { 
-				newSymbolRecord($1,floatt,true);
-				generateQuad("STO",$3,NULL,createNewIdNode($1));
-				mainScope.printAll();
-				cout<< "ass for float id (var) -> FLOAT_ID: " <<$1<<" with value "<<$3<<endl;}|
+				if(mainScope.lookup($1)==NULL){
+					if($3!=NULL){
+						newSymbolRecord($1,integer,true);
+						generateQuad("STO",$3,NULL,createNewIdNode($1));
+						mainScope.printAll();
+						cout<< "ass for int id (var) -> INT_ID: " <<$1<<" with value "<<$3<<endl;
+					}
+				}
+				else errorExistsBefore($1);	
+			} |
+	FLOAT_ID EQUAL float_int_expr ';' {
+				if(mainScope.lookup($1)==NULL){
+					if($3!=NULL){
+						newSymbolRecord($1,floatt,true);
+						generateQuad("STO",$3,NULL,createNewIdNode($1));
+						mainScope.printAll();
+						cout<< "ass for float id (var) -> FLOAT_ID: " <<$1<<" with value "<<$3<<endl;
+					}
+				}
+				else errorExistsBefore($1);
+			}|
 	STR_ID EQUAL str_expr ';' { 
-				newSymbolRecord($1,str,true);
-				mainScope.printAll();
-				cout<< "ass for string id (var) -> STR_ID: " <<$1<<" with value "<<$3<<endl;}|
-	BOOL_ID EQUAL bool_expr ';' 
+				if(mainScope.lookup($1)==NULL){
+					if($3!=NULL){
+						newSymbolRecord($1,str,true);
+						mainScope.printAll();
+						cout<< "ass for string id (var) -> STR_ID: " <<$1<<" with value "<<$3<<endl;
+					}
+				}
+				else errorExistsBefore($1);
+			}|
+	BOOL_ID EQUAL bool_expr ';' { 
+				if(mainScope.lookup($1)==NULL){
+					if($3!=NULL){
+						newSymbolRecord($1,boolean,true);
+						generateQuad("STO",$3,NULL,createNewIdNode($1));
+						mainScope.printAll();
+						cout<< "ass for bool id (var) -> BOOL_ID: " <<$1<<endl;
+					}
+				}
+				else errorExistsBefore($1);
+			}
 	;
 	
 constant_stmt:
@@ -145,86 +197,133 @@ constant_stmt:
 	
 constant:
 	INT_ID EQUAL INT ';' { 
+						if(mainScope.lookup($1)==NULL){
 							NodeWithType* nt=createNewValueNode(NewNodeInt($3));
 							newSymbolRecord($1,integer,false);
 							generateQuad("STO",nt,NULL,createNewIdNode($1));
 							mainScope.printAll();
-							cout<< "ass for int id (const) -> INT_ID: " <<$1<<" with value "<<$3<<endl;}  |
+							cout<< "ass for int id (const) -> INT_ID: " <<$1<<" with value "<<$3<<endl;
+						}
+						else errorExistsBefore($1);	
+					} |
 	FLOAT_ID EQUAL FLOAT ';' { 
+						if(mainScope.lookup($1)==NULL){	
 							NodeWithType* nt=createNewValueNode(NewNodeFloat($3));
 							newSymbolRecord($1,floatt,false);
 							generateQuad("STO",nt,NULL,createNewIdNode($1));
 							mainScope.printAll();
-							cout<< "ass for float id (const) -> FLOAT_ID: " <<$1<<" with value "<<$3<<endl;}|
+							cout<< "ass for float id (const) -> FLOAT_ID: " <<$1<<" with value "<<$3<<endl;
+						}
+						else errorExistsBefore($1);	
+					}|
 	STR_ID EQUAL STRING ';' {
+						if(mainScope.lookup($1)==NULL){	
 							NodeWithType* nt=createNewValueNode(NewNodeString($3));
 							newSymbolRecord($1,str,false);
 							generateQuad("STO",nt,NULL,createNewIdNode($1));
 							mainScope.printAll();
-							cout<< "ass for str id (const) -> STR_ID: " <<$1<<" with value "<<$3<<endl;}|
-	BOOL_ID EQUAL boolean ';' { cout << "const bool id " << endl; }
+							cout<< "ass for str id (const) -> STR_ID: " <<$1<<" with value "<<$3<<endl;
+						}
+						else errorExistsBefore($1);
+					}|
+	BOOL_ID EQUAL boolean ';' {
+						if(mainScope.lookup($1)==NULL){	
+							NodeWithType* nt=createNewValueNode(NewNodeBool($3));
+							newSymbolRecord($1,boolean,false);
+							generateQuad("STO",nt,NULL,createNewIdNode($1));
+							mainScope.printAll();
+							cout<< "ass for bool id (const) -> BOOL_ID: " <<$1<<" with value "<<$3<<endl;
+						}
+						else errorExistsBefore($1);
+					}
 	;
 	
 assignment:
 	INT_ID EQUAL int_expr ';' { 
-				generateQuad("STO",$3,NULL,createNewIdNode($1));
-				cout<< "ass for int id (var) -> INT_ID: " <<$1<<" with value "<<$3<<endl;} |
+				if(mainScope.lookup($1)!=NULL){
+					if($3!=NULL){
+						generateQuad("STO",$3,NULL,createNewIdNode($1));
+						cout<< "ass for int id (var) -> INT_ID: " <<$1<<" with value "<<$3<<endl;
+					}
+				}
+				else errorDoesntExist($1);
+			} |
 	FLOAT_ID EQUAL float_int_expr ';' { 
-				generateQuad("STO",$3,NULL,createNewIdNode($1));
-				cout<< "ass for float id (var) -> FLOAT_ID: " <<$1<<" with value "<<$3<<endl;}|
+				if(mainScope.lookup($1)!=NULL){
+					if($3!=NULL){
+						generateQuad("STO",$3,NULL,createNewIdNode($1));
+						cout<< "ass for float id (var) -> FLOAT_ID: " <<$1<<" with value "<<$3<<endl;
+					}
+				}
+				else errorDoesntExist($1);		
+			}|
 	STR_ID EQUAL str_expr ';' { 
-				cout<< "ass for string id (var) -> STR_ID: " <<$1<<" with value "<<$3<<endl;}|
+				if(mainScope.lookup($1)!=NULL){
+					if($3!=NULL){
+					cout<< "ass for string id (var) -> STR_ID: " <<$1<<" with value "<<$3<<endl;
+					}
+				}
+				else errorDoesntExist($1);		
+			}|
 	BOOL_ID EQUAL bool_expr ';' { 
-				generateQuad("STO",boolRes.top(),NULL,createNewIdNode($1));
-				boolRes.pop();
-				cout<< "ass for bool id (var) -> BOOL_ID: " <<$1<<" with value "<<$3<<endl;}
+				if(mainScope.lookup($1)!=NULL){
+					if($3!=NULL){
+						generateQuad("STO",boolRes.top(),NULL,createNewIdNode($1));
+						boolRes.pop();
+						cout<< "ass for bool id (var) -> BOOL_ID: " <<$1<<" with value "<<$3<<endl;
+					}
+				}
+				else errorDoesntExist($1);		
+			}
 	;
 
 
 int_expr:
-	int_expr '+' int_expr { $$=createNewExprNode(pls,2,$1,$3); generateQuad("ADD",$1,$3,$$); cout << "PLUS: " << $$ <<endl; } | 
-	int_expr '-' int_expr { $$=createNewExprNode(mins,2,$1,$3); generateQuad("SUB",$1,$3,$$); cout << "MINUS: " << $$ <<endl; }| 
-	int_expr '*' int_expr { $$=createNewExprNode(mul,2,$1,$3); generateQuad("MUL",$1,$3,$$); cout << "MUL: " << $$ << endl;  }| 
-	int_expr '/' int_expr { $$=createNewExprNode(dv,2,$1,$3); generateQuad("DIV",$1,$3,$$); cout << "DIV: " << $$ <<endl; }|  
-	int_expr '%' int_expr { $$=createNewExprNode(md,2,$1,$3);  generateQuad("MOD",$1,$3,$$);cout << "MOD: " << $$ << endl; }|  
+	int_expr '+' int_expr { $$=createNewExprNode(pls,2,$1,$3); if($$!=NULL){generateQuad("ADD",$1,$3,$$); cout << "PLUS "  <<endl;} } | 
+	int_expr '-' int_expr { $$=createNewExprNode(mins,2,$1,$3); if($$!=NULL){generateQuad("SUB",$1,$3,$$); cout << "MINUS" <<endl; }}| 
+	int_expr '*' int_expr { $$=createNewExprNode(mul,2,$1,$3); if($$!=NULL){generateQuad("MUL",$1,$3,$$); cout << "MUL" <<endl; } }| 
+	int_expr '/' int_expr { $$=createNewExprNode(dv,2,$1,$3); if($$!=NULL){generateQuad("DIV",$1,$3,$$); cout << "DIV " <<endl; }}|  
+	int_expr '%' int_expr { $$=createNewExprNode(md,2,$1,$3);  if($$!=NULL){generateQuad("MOD",$1,$3,$$);cout << "MOD " <<endl; }}|  
 	
-	int_expr '&' int_expr { $$=createNewExprNode(b_and,2,$1,$3); generateQuad("AND",$1,$3,$$); cout << "BITWISE_AND: " <<endl; } | //<< $$=$1&$3 
-	int_expr '|' int_expr { $$=createNewExprNode(b_or,2,$1,$3); generateQuad("OR",$1,$3,$$); cout << "BITWISE_OR: " <<endl; } | // << $$=$1|$3 
-	int_expr '^' int_expr { $$=createNewExprNode(b_xor,2,$1,$3); generateQuad("XOR",$1,$3,$$); cout << "BITWISE_XOR: " <<endl; } | // << $$=$1^$3 
-	'~' int_expr { $$=createNewExprNode(b_not,1,$2,NULL); generateQuad("NOT",$2,NULL,$$); cout << "BITWISE_NOT: " <<endl; } | // << $$=~$2 
-	int_expr BITWISE_SHIFT_LEFT int_expr { $$=createNewExprNode(b_shft_r,2,$1,$3); generateQuad("SHFTL",$1,$3,$$); cout << "BITWISE_SHIFT_LEFT: " <<endl; } | //<< $$=$1<<$3 
-	int_expr BITWISE_SHIFT_RIGHT int_expr { $$=createNewExprNode(b_shft_l,2,$1,$3); generateQuad("SHFTR",$1,$3,$$); cout << "BITWISE_SHIFT_RIGHT: " <<endl; } |  //<< $$=$1>>$3 
+	int_expr '&' int_expr { $$=createNewExprNode(b_and,2,$1,$3); if($$!=NULL){generateQuad("AND",$1,$3,$$); cout << "BITWISE_AND " <<endl;} } | //<< $$=$1&$3 
+	int_expr '|' int_expr { $$=createNewExprNode(b_or,2,$1,$3); if($$!=NULL){generateQuad("OR",$1,$3,$$); cout << "BITWISE_OR " <<endl; }} | // << $$=$1|$3 
+	int_expr '^' int_expr { $$=createNewExprNode(b_xor,2,$1,$3); if($$!=NULL){generateQuad("XOR",$1,$3,$$); cout << "BITWISE_XOR " <<endl; }} | // << $$=$1^$3 
+	'~' int_expr { $$=createNewExprNode(b_not,1,$2,NULL); if($$!=NULL){generateQuad("NOT",$2,NULL,$$); cout << "BITWISE_NOT: " <<endl; }} | // << $$=~$2 
+	int_expr BITWISE_SHIFT_LEFT int_expr { $$=createNewExprNode(b_shft_r,2,$1,$3); if($$!=NULL){generateQuad("SHFTL",$1,$3,$$); cout << "BITWISE_SHIFT_LEFT: " <<endl; }} | //<< $$=$1<<$3 
+	int_expr BITWISE_SHIFT_RIGHT int_expr { $$=createNewExprNode(b_shft_l,2,$1,$3); if($$!=NULL){generateQuad("SHFTR",$1,$3,$$); cout << "BITWISE_SHIFT_RIGHT: " <<endl; }} |  //<< $$=$1>>$3 
 	
 	'(' int_expr ')' { $$=$2;	cout << "Brackets  " <<endl; } | 
 	INT { $$=createNewValueNode(NewNodeInt($1)); cout<<"int value"<<endl; } |
-	INT_ID { $$=createNewIdNode($1); cout<<"int id "<<endl;}
+	INT_ID { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); cout<<"int id "<<endl;} 
+		else {$$=NULL; errorDoesntExist($1);} }
 	;
 
 float_expr:
-	float_expr '+' float_expr { $$=createNewExprNode(pls,2,$1,$3); generateQuad("ADD",$1,$3,$$); cout << "PLUS: " << $$ <<endl; } |
-	float_expr '-' float_expr { $$=createNewExprNode(mins,2,$1,$3); generateQuad("SUB",$1,$3,$$); cout << "MINUS: " << $$ <<endl; }| 
-	float_expr '*' float_expr { $$=createNewExprNode(mul,2,$1,$3); generateQuad("MUL",$1,$3,$$); cout << "MUL: " << $$ << endl;  }| 
-	float_expr '/' float_expr { $$=createNewExprNode(dv,2,$1,$3); generateQuad("DIV",$1,$3,$$); cout << "DIV: " << $$ <<endl; }| 
-	float_expr '%' float_expr { $$=createNewExprNode(md,2,$1,$3);  generateQuad("MOD",$1,$3,$$);cout << "MOD: " << $$ << endl; }| 
-	float_expr POW float_expr { $$=createNewExprNode(pw,2,$1,$3);  generateQuad("POW",$1,$3,$$);cout << "POW: " << $$ << endl; }| 
+	float_expr '+' float_expr { $$=createNewExprNode(pls,2,$1,$3); if($$!=NULL){generateQuad("ADD",$1,$3,$$); cout << "PLUS: " << $$ <<endl; }} |
+	float_expr '-' float_expr { $$=createNewExprNode(mins,2,$1,$3); if($$!=NULL){generateQuad("SUB",$1,$3,$$); cout << "MINUS: " << $$ <<endl; }}| 
+	float_expr '*' float_expr { $$=createNewExprNode(mul,2,$1,$3); if($$!=NULL){generateQuad("MUL",$1,$3,$$); cout << "MUL: " << $$ << endl; } }| 
+	float_expr '/' float_expr { $$=createNewExprNode(dv,2,$1,$3); if($$!=NULL){generateQuad("DIV",$1,$3,$$); cout << "DIV: " << $$ <<endl; }}| 
+	float_expr '%' float_expr { $$=createNewExprNode(md,2,$1,$3);  if($$!=NULL){generateQuad("MOD",$1,$3,$$);cout << "MOD: " << $$ << endl; }}| 
+	float_expr POW float_expr { $$=createNewExprNode(pw,2,$1,$3);  if($$!=NULL){generateQuad("POW",$1,$3,$$);cout << "POW: " << $$ << endl; }}| 
 	
-	float_expr '+' int_expr { $$=createNewExprNode(pls,2,$1,$3); generateQuad("ADD",$1,$3,$$); cout << "PLUS: " << $$ <<endl; } |
-	float_expr '-' int_expr { $$=createNewExprNode(mins,2,$1,$3); generateQuad("SUB",$1,$3,$$); cout << "MINUS: " << $$ <<endl; }| 
-	float_expr '*' int_expr { $$=createNewExprNode(mul,2,$1,$3); generateQuad("MUL",$1,$3,$$); cout << "MUL: " << $$ << endl;  }| 
-	float_expr '/' int_expr { $$=createNewExprNode(dv,2,$1,$3); generateQuad("DIV",$1,$3,$$); cout << "DIV: " << $$ <<endl; }| 
-	float_expr '%' int_expr { $$=createNewExprNode(md,2,$1,$3);  generateQuad("MOD",$1,$3,$$);cout << "MOD: " << $$ << endl; }| 
-	float_expr POW int_expr { $$=createNewExprNode(pw,2,$1,$3);  generateQuad("POW",$1,$3,$$);cout << "POW: " << $$ << endl; }| 
+	float_expr '+' int_expr { $$=createNewExprNode(pls,2,$1,$3); if($$!=NULL){generateQuad("ADD",$1,$3,$$); cout << "PLUS: " << $$ <<endl; }} |
+	float_expr '-' int_expr { $$=createNewExprNode(mins,2,$1,$3); if($$!=NULL){generateQuad("SUB",$1,$3,$$); cout << "MINUS: " << $$ <<endl; }}| 
+	float_expr '*' int_expr { $$=createNewExprNode(mul,2,$1,$3); if($$!=NULL){generateQuad("MUL",$1,$3,$$); cout << "MUL: " << $$ << endl; } }| 
+	float_expr '/' int_expr { $$=createNewExprNode(dv,2,$1,$3); if($$!=NULL){generateQuad("DIV",$1,$3,$$); cout << "DIV: " << $$ <<endl; }}| 
+	float_expr '%' int_expr { $$=createNewExprNode(md,2,$1,$3);  if($$!=NULL){generateQuad("MOD",$1,$3,$$);cout << "MOD: " << $$ << endl; }}| 
+	float_expr POW int_expr { $$=createNewExprNode(pw,2,$1,$3);  if($$!=NULL){generateQuad("POW",$1,$3,$$);cout << "POW: " << $$ << endl; }}| 
 	
-	int_expr '+' float_expr { $$=createNewExprNode(pls,2,$1,$3); generateQuad("ADD",$1,$3,$$); cout << "PLUS: " << $$ <<endl; } |
-	int_expr '-' float_expr { $$=createNewExprNode(mins,2,$1,$3); generateQuad("SUB",$1,$3,$$); cout << "MINUS: " << $$ <<endl; }| 
-	int_expr '*' float_expr { $$=createNewExprNode(mul,2,$1,$3); generateQuad("MUL",$1,$3,$$); cout << "MUL: " << $$ << endl;  }| 
-	int_expr '/' float_expr { $$=createNewExprNode(dv,2,$1,$3); generateQuad("DIV",$1,$3,$$); cout << "DIV: " << $$ <<endl; }| 
-	int_expr '%' float_expr { $$=createNewExprNode(md,2,$1,$3);  generateQuad("MOD",$1,$3,$$);cout << "MOD: " << $$ << endl; }| 
-	int_expr POW float_expr { $$=createNewExprNode(pw,2,$1,$3);  generateQuad("POW",$1,$3,$$);cout << "POW: " << $$ << endl; }| 
+	int_expr '+' float_expr { $$=createNewExprNode(pls,2,$1,$3); if($$!=NULL){generateQuad("ADD",$1,$3,$$); cout << "PLUS: " << $$ <<endl; }} |
+	int_expr '-' float_expr { $$=createNewExprNode(mins,2,$1,$3); if($$!=NULL){generateQuad("SUB",$1,$3,$$); cout << "MINUS: " << $$ <<endl; }}| 
+	int_expr '*' float_expr { $$=createNewExprNode(mul,2,$1,$3); if($$!=NULL){generateQuad("MUL",$1,$3,$$); cout << "MUL: " << $$ << endl;  }}| 
+	int_expr '/' float_expr { $$=createNewExprNode(dv,2,$1,$3); if($$!=NULL){generateQuad("DIV",$1,$3,$$); cout << "DIV: " << $$ <<endl; }}| 
+	int_expr '%' float_expr { $$=createNewExprNode(md,2,$1,$3);  if($$!=NULL){generateQuad("MOD",$1,$3,$$);cout << "MOD: " << $$ << endl; }}| 
+	int_expr POW float_expr { $$=createNewExprNode(pw,2,$1,$3);  if($$!=NULL){generateQuad("POW",$1,$3,$$);cout << "POW: " << $$ << endl; }}| 
 	
 	'(' float_expr ')' { $$=$2; cout << "Brackets  " <<endl; } |
 	FLOAT { $$=createNewValueNode(NewNodeFloat($1)); cout<<"float value"<<endl; }  | 
-	FLOAT_ID  { $$=createNewIdNode($1); cout<<"float id "<<endl;}
+	FLOAT_ID  { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); cout<<"float id "<<endl;} 
+		else {$$=NULL; errorDoesntExist($1);}  }
 	;
 	
 float_int_expr:
@@ -232,7 +331,8 @@ float_int_expr:
 	
 str_expr:
 	STRING { $$=createNewValueNode(NewNodeString($1)); cout<<"string value"<<endl; }  |  
-	STR_ID { $$=createNewIdNode($1); cout<<"string id"<<endl; }
+	STR_ID { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); cout<<"string id"<<endl; }
+		else {$$=NULL; errorDoesntExist($1);}}
 	;
 
 if_else_if_else_stmt:
@@ -275,17 +375,19 @@ while_loop:
 	WHILE start_while_if bool_expr end_while_if '{' stmt '}' {
 		int temp =brLabels.top();
 		brLabels.pop();
-		generateBranchQuad("JMP",brLabels.top(),NULL);
-		outLabel(temp);
-		brLabels.pop();	
+		if($3!=NULL){
+			generateBranchQuad("JMP",brLabels.top(),NULL);
+			outLabel(temp);
 		}
+		brLabels.pop();	
+	}
 	;
 	
 start_while_if:
 	'(' {generateLabelPair();};
 	
 end_while_if:
-	')' {generateBranchQuad("JFALSE",brLabels.top(),boolRes.top()); boolRes.pop();}  ;
+	')' { if(!boolRes.empty()){generateBranchQuad("JFALSE",brLabels.top(),boolRes.top()); boolRes.pop();} }  ;
 	
 for_loop:
 	FOR '(' for_assignment ',' start_bool_expr bool_expr end_bool_expr ')' '{' stmt '}' '(' for_assignment ')' ';' {
@@ -321,33 +423,41 @@ bool_expr:
 	LOGIC_NOT bool_expr { cout << "LOGIC_NOT " <<endl; } |
 	bool_expr LOGIC_AND bool_expr { 
 						$$=createNewExprNode(l_and,2,$1,$3);
-						generateQuad("AND",$1,$3,$$);
-						boolRes.push($$); 						
-						cout << "LOGIC_AND " <<endl; } | 
+						if($$!=NULL){
+							generateQuad("AND",$1,$3,$$);
+							boolRes.push($$); 						
+							cout << "LOGIC_AND " <<endl;
+						}
+					} | 
 	bool_expr LOGIC_OR bool_expr { cout << "LOGIC_OR " <<endl; } |
 	boolean { cout << "boolean " <<endl; } |
-	BOOL_ID { $$=createNewIdNode($1); cout<<"bool id"<<endl; } |
-	bool_term {}|
+	BOOL_ID { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); cout<<"bool id "<<endl;} 
+			  else {$$=NULL; errorDoesntExist($1);}  } |
+	bool_term {$$=$1;}|
 	'(' bool_expr ')' { $$=$2;  cout << "Brackets " <<endl; }
 	;
 
 	
+	
 bool_term:
-	compare_opd EQ compare_opd { $$=createNewExprNode(eq,2,$1,$3); generateQuad("EQ",$1,$3,$$); cout << "EQ " <<endl; } | 
-	compare_opd NOT_EQ compare_opd { $$=createNewExprNode(ne,2,$1,$3); generateQuad("NOT_EQ",$1,$3,$$); cout << "NOT_EQ " <<endl; } | 
-	compare_opd GR compare_opd { $$=createNewExprNode(gt,2,$1,$3); generateQuad("GR",$1,$3,$$); cout << "GR " <<endl; } | 
-	compare_opd GR_EQ compare_opd { $$=createNewExprNode(gte,2,$1,$3); generateQuad("GR_EQ",$1,$3,$$); cout << "GR_EQ " <<endl; } | 
-	compare_opd SM compare_opd { $$=createNewExprNode(sm,2,$1,$3); generateQuad("SM",$1,$3,$$); cout << "SM " <<endl; } | 
-	compare_opd SM_EQ compare_opd { $$=createNewExprNode(sme,2,$1,$3); generateQuad("SM_EQ",$1,$3,$$); cout << "SM_EQ " <<endl; } 
+	compare_opd EQ compare_opd { $$=createNewExprNode(eq,2,$1,$3); if($$!=NULL){generateQuad("EQ",$1,$3,$$); cout << "EQ " <<endl; }} | 
+	compare_opd NOT_EQ compare_opd { $$=createNewExprNode(ne,2,$1,$3); if($$!=NULL){generateQuad("NOT_EQ",$1,$3,$$); cout << "NOT_EQ " <<endl; }} | 
+	compare_opd GR compare_opd { $$=createNewExprNode(gt,2,$1,$3); if($$!=NULL){generateQuad("GR",$1,$3,$$); cout << "GR " <<endl; }} | 
+	compare_opd GR_EQ compare_opd { $$=createNewExprNode(gte,2,$1,$3); if($$!=NULL){generateQuad("GR_EQ",$1,$3,$$); cout << "GR_EQ " <<endl; }} | 
+	compare_opd SM compare_opd { $$=createNewExprNode(sm,2,$1,$3); if($$!=NULL){generateQuad("SM",$1,$3,$$); cout << "SM " <<endl; }} | 
+	compare_opd SM_EQ compare_opd { $$=createNewExprNode(sme,2,$1,$3); if($$!=NULL){generateQuad("SM_EQ",$1,$3,$$); cout << "SM_EQ " <<endl; }} 
 	;
 	
 compare_opd:
 	INT {$$=createNewValueNode(NewNodeInt($1));}|
-	INT_ID {$$=createNewIdNode($1);}|
+	INT_ID { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); cout<<"int id "<<endl;} 
+			else {$$=NULL; errorDoesntExist($1);} }|
 	FLOAT {$$=createNewValueNode(NewNodeFloat($1)); } |
-	FLOAT_ID {$$=createNewIdNode($1);}|
+	FLOAT_ID { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); cout<<"float id "<<endl;} 
+				else {$$=NULL; errorDoesntExist($1);} }|
 	STRING {$$=createNewValueNode(NewNodeString($1));}|
-	STR_ID {$$=createNewIdNode($1);}
+	STR_ID { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); cout<<"str id "<<endl;} 
+			else {$$=NULL; errorDoesntExist($1);} }
 	; 
 
 	
@@ -364,10 +474,14 @@ start_switch:
 	};
 
 id:
-	INT_ID { $$=createNewIdNode($1); switchIds.push($$); cout << " int id " << endl; }
-	| FLOAT_ID  { $$=createNewIdNode($1); switchIds.push($$);  cout << " float id " << endl; }
-	| STR_ID  { $$=createNewIdNode($1); switchIds.push($$);  cout << " str id " << endl; }
-	| BOOL_ID  { $$=createNewIdNode($1); switchIds.push($$);  cout << " bool id " << endl; }
+	INT_ID { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); switchIds.push($$); cout<<"int id "<<endl;} 
+			else {$$=NULL; errorDoesntExist($1);} }
+	| FLOAT_ID  { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); switchIds.push($$); cout<<"float id "<<endl;} 
+				  else {$$=NULL; errorDoesntExist($1);} }
+	| STR_ID  { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); switchIds.push($$); cout<<"str id "<<endl;} 
+				else {$$=NULL; errorDoesntExist($1);} }
+	| BOOL_ID  { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); switchIds.push($$); cout<<"bool id "<<endl;} 
+				else {$$=NULL; errorDoesntExist($1);} }
 	;
 	
 case_stmts:
@@ -474,6 +588,23 @@ void newSymbolRecord( char * name, IdType ty, bool v_c ){
 	mainScope.insert(name,&rec); 
 }
 
+/*bool searchSymbolRecord( char * name){
+	SymRec* s=mainScope.lookup(name);
+	if(s==NULL) return false;
+	else {
+		
+		return true;
+	}
+}
+*/
+void errorExistsBefore(char * name){
+	cout<<"There exists a variable with the same name! '"<< name <<"'"<<endl;
+}
+
+void errorDoesntExist(char * name){
+	cout<<"This variable has not been declared ! '"<< name <<"'"<<endl;
+}
+
 /*bool updateSymbolRecord(char * name, bool v_c , NodeWithType* vlu  ) {
 	//check if it's var not const
 	if(v_c){
@@ -565,6 +696,8 @@ NodeWithType * createNewIdNode(char* idd){
 }
 
 NodeWithType * createNewExprNode(oprt op, int n, NodeWithType* oprd1, NodeWithType* oprd2 ){
+	if(oprd1==NULL || oprd2 ==NULL)
+		return NULL;
 	expr * ex=new expr();
 	ex->opt=op;
 	ex->nOps=n;
