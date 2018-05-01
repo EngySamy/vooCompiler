@@ -570,11 +570,11 @@ static const yytype_uint16 yyrline[] =
      297,   302,   303,   304,   305,   306,   307,   309,   310,   311,
      312,   313,   314,   316,   317,   318,   319,   320,   321,   323,
      324,   325,   330,   330,   333,   334,   339,   345,   358,   369,
-     370,   371,   375,   387,   390,   393,   403,   407,   410,   413,
-     413,   423,   424,   432,   433,   434,   436,   437,   443,   444,
-     445,   446,   447,   448,   452,   453,   455,   456,   458,   459,
-     465,   471,   477,   479,   481,   483,   488,   489,   493,   493,
-     504,   511,   514,   515,   516,   517,   522,   523
+     370,   371,   375,   387,   390,   393,   406,   410,   413,   426,
+     426,   437,   438,   446,   454,   455,   457,   461,   467,   468,
+     469,   470,   471,   472,   476,   477,   479,   480,   482,   483,
+     489,   496,   503,   505,   507,   509,   514,   515,   519,   519,
+     534,   541,   544,   545,   546,   547,   552,   553
 };
 #endif
 
@@ -2274,46 +2274,60 @@ yyreduce:
     {
 		int temp =brLabels.top();
 		brLabels.pop();
-		generateBranchQuad("JMP",brLabels.top(),NULL);
-		outLabel(temp);
-		brLabels.pop();;}
+		if((yyvsp[(6) - (15)].nodeval)!=NULL){
+			generateBranchQuad("JMP",brLabels.top(),NULL);
+			outLabel(temp);
+		}
+		brLabels.pop();
+	;}
     break;
 
   case 86:
 
 /* Line 1455 of yacc.c  */
-#line 403 "voo.y"
+#line 406 "voo.y"
     {generateLabelPair();;}
     break;
 
   case 87:
 
 /* Line 1455 of yacc.c  */
-#line 407 "voo.y"
-    {generateBranchQuad("JFALSE",brLabels.top(),boolRes.top()); boolRes.pop();;}
+#line 410 "voo.y"
+    { if(!boolRes.empty()){generateBranchQuad("JFALSE",brLabels.top(),boolRes.top()); boolRes.pop();} ;}
     break;
 
   case 88:
 
 /* Line 1455 of yacc.c  */
-#line 410 "voo.y"
-    {generateQuad("STO",(yyvsp[(3) - (3)].nodeval),NULL,createNewIdNode((yyvsp[(1) - (3)].idval)));;}
+#line 413 "voo.y"
+    {
+		if(mainScope.lookup((yyvsp[(1) - (3)].idval))!=NULL){
+			if((yyvsp[(3) - (3)].nodeval)!=NULL){
+				generateQuad("STO",(yyvsp[(3) - (3)].nodeval),NULL,createNewIdNode((yyvsp[(1) - (3)].idval)));
+				cout<< "ass for int id (var) -> INT_ID: " <<(yyvsp[(1) - (3)].idval)<<" with value "<<(yyvsp[(3) - (3)].nodeval)<<endl;
+			}
+		}
+		else errorDoesntExist((yyvsp[(1) - (3)].idval));
+			 
+	;}
     break;
 
   case 89:
 
 /* Line 1455 of yacc.c  */
-#line 413 "voo.y"
+#line 426 "voo.y"
     {int label=generateOneLabel(); outLabel(label); brLabels.push(label);;}
     break;
 
   case 90:
 
 /* Line 1455 of yacc.c  */
-#line 414 "voo.y"
+#line 427 "voo.y"
     {
-		generateBranchQuad("JTRUE",brLabels.top(),boolRes.top()); 
-		boolRes.pop();
+		if(!boolRes.empty()){
+			generateBranchQuad("JTRUE",brLabels.top(),boolRes.top()); 
+			boolRes.pop();
+		}
 		brLabels.pop();
 	;}
     break;
@@ -2321,14 +2335,14 @@ yyreduce:
   case 91:
 
 /* Line 1455 of yacc.c  */
-#line 423 "voo.y"
+#line 437 "voo.y"
     { cout << "LOGIC_NOT " <<endl; ;}
     break;
 
   case 92:
 
 /* Line 1455 of yacc.c  */
-#line 424 "voo.y"
+#line 438 "voo.y"
     { 
 						(yyval.nodeval)=createNewExprNode(l_and,2,(yyvsp[(1) - (3)].nodeval),(yyvsp[(3) - (3)].nodeval));
 						if((yyval.nodeval)!=NULL){
@@ -2342,21 +2356,28 @@ yyreduce:
   case 93:
 
 /* Line 1455 of yacc.c  */
-#line 432 "voo.y"
-    { cout << "LOGIC_OR " <<endl; ;}
+#line 446 "voo.y"
+    { 
+					(yyval.nodeval)=createNewExprNode(l_and,2,(yyvsp[(1) - (3)].nodeval),(yyvsp[(3) - (3)].nodeval));
+						if((yyval.nodeval)!=NULL){
+							generateQuad("OR",(yyvsp[(1) - (3)].nodeval),(yyvsp[(3) - (3)].nodeval),(yyval.nodeval));
+							boolRes.push((yyval.nodeval)); 						
+							cout << "LOGIC_OR " <<endl;
+						}
+					;}
     break;
 
   case 94:
 
 /* Line 1455 of yacc.c  */
-#line 433 "voo.y"
+#line 454 "voo.y"
     { cout << "boolean " <<endl; ;}
     break;
 
   case 95:
 
 /* Line 1455 of yacc.c  */
-#line 434 "voo.y"
+#line 455 "voo.y"
     { if(mainScope.lookup((yyvsp[(1) - (1)].idval))!=NULL){(yyval.nodeval)=createNewIdNode((yyvsp[(1) - (1)].idval)); cout<<"bool id "<<endl;} 
 			  else {(yyval.nodeval)=NULL; errorDoesntExist((yyvsp[(1) - (1)].idval));}  ;}
     break;
@@ -2364,70 +2385,73 @@ yyreduce:
   case 96:
 
 /* Line 1455 of yacc.c  */
-#line 436 "voo.y"
-    {(yyval.nodeval)=(yyvsp[(1) - (1)].nodeval);;}
+#line 457 "voo.y"
+    {(yyval.nodeval)=(yyvsp[(1) - (1)].nodeval);   if((yyval.nodeval)!=NULL){
+							boolRes.push((yyval.nodeval)); 						
+							
+						}	;}
     break;
 
   case 97:
 
 /* Line 1455 of yacc.c  */
-#line 437 "voo.y"
+#line 461 "voo.y"
     { (yyval.nodeval)=(yyvsp[(2) - (3)].nodeval);  cout << "Brackets " <<endl; ;}
     break;
 
   case 98:
 
 /* Line 1455 of yacc.c  */
-#line 443 "voo.y"
+#line 467 "voo.y"
     { (yyval.nodeval)=createNewExprNode(eq,2,(yyvsp[(1) - (3)].nodeval),(yyvsp[(3) - (3)].nodeval)); if((yyval.nodeval)!=NULL){generateQuad("EQ",(yyvsp[(1) - (3)].nodeval),(yyvsp[(3) - (3)].nodeval),(yyval.nodeval)); cout << "EQ " <<endl; };}
     break;
 
   case 99:
 
 /* Line 1455 of yacc.c  */
-#line 444 "voo.y"
+#line 468 "voo.y"
     { (yyval.nodeval)=createNewExprNode(ne,2,(yyvsp[(1) - (3)].nodeval),(yyvsp[(3) - (3)].nodeval)); if((yyval.nodeval)!=NULL){generateQuad("NOT_EQ",(yyvsp[(1) - (3)].nodeval),(yyvsp[(3) - (3)].nodeval),(yyval.nodeval)); cout << "NOT_EQ " <<endl; };}
     break;
 
   case 100:
 
 /* Line 1455 of yacc.c  */
-#line 445 "voo.y"
+#line 469 "voo.y"
     { (yyval.nodeval)=createNewExprNode(gt,2,(yyvsp[(1) - (3)].nodeval),(yyvsp[(3) - (3)].nodeval)); if((yyval.nodeval)!=NULL){generateQuad("GR",(yyvsp[(1) - (3)].nodeval),(yyvsp[(3) - (3)].nodeval),(yyval.nodeval)); cout << "GR " <<endl; };}
     break;
 
   case 101:
 
 /* Line 1455 of yacc.c  */
-#line 446 "voo.y"
+#line 470 "voo.y"
     { (yyval.nodeval)=createNewExprNode(gte,2,(yyvsp[(1) - (3)].nodeval),(yyvsp[(3) - (3)].nodeval)); if((yyval.nodeval)!=NULL){generateQuad("GR_EQ",(yyvsp[(1) - (3)].nodeval),(yyvsp[(3) - (3)].nodeval),(yyval.nodeval)); cout << "GR_EQ " <<endl; };}
     break;
 
   case 102:
 
 /* Line 1455 of yacc.c  */
-#line 447 "voo.y"
+#line 471 "voo.y"
     { (yyval.nodeval)=createNewExprNode(sm,2,(yyvsp[(1) - (3)].nodeval),(yyvsp[(3) - (3)].nodeval)); if((yyval.nodeval)!=NULL){generateQuad("SM",(yyvsp[(1) - (3)].nodeval),(yyvsp[(3) - (3)].nodeval),(yyval.nodeval)); cout << "SM " <<endl; };}
     break;
 
   case 103:
 
 /* Line 1455 of yacc.c  */
-#line 448 "voo.y"
+#line 472 "voo.y"
     { (yyval.nodeval)=createNewExprNode(sme,2,(yyvsp[(1) - (3)].nodeval),(yyvsp[(3) - (3)].nodeval)); if((yyval.nodeval)!=NULL){generateQuad("SM_EQ",(yyvsp[(1) - (3)].nodeval),(yyvsp[(3) - (3)].nodeval),(yyval.nodeval)); cout << "SM_EQ " <<endl; };}
     break;
 
   case 104:
 
 /* Line 1455 of yacc.c  */
-#line 452 "voo.y"
+#line 476 "voo.y"
     {(yyval.nodeval)=createNewValueNode(NewNodeInt((yyvsp[(1) - (1)].ival)));;}
     break;
 
   case 105:
 
 /* Line 1455 of yacc.c  */
-#line 453 "voo.y"
+#line 477 "voo.y"
     { if(mainScope.lookup((yyvsp[(1) - (1)].idval))!=NULL){(yyval.nodeval)=createNewIdNode((yyvsp[(1) - (1)].idval)); cout<<"int id "<<endl;} 
 			else {(yyval.nodeval)=NULL; errorDoesntExist((yyvsp[(1) - (1)].idval));} ;}
     break;
@@ -2435,14 +2459,14 @@ yyreduce:
   case 106:
 
 /* Line 1455 of yacc.c  */
-#line 455 "voo.y"
+#line 479 "voo.y"
     {(yyval.nodeval)=createNewValueNode(NewNodeFloat((yyvsp[(1) - (1)].fval))); ;}
     break;
 
   case 107:
 
 /* Line 1455 of yacc.c  */
-#line 456 "voo.y"
+#line 480 "voo.y"
     { if(mainScope.lookup((yyvsp[(1) - (1)].idval))!=NULL){(yyval.nodeval)=createNewIdNode((yyvsp[(1) - (1)].idval)); cout<<"float id "<<endl;} 
 				else {(yyval.nodeval)=NULL; errorDoesntExist((yyvsp[(1) - (1)].idval));} ;}
     break;
@@ -2450,14 +2474,14 @@ yyreduce:
   case 108:
 
 /* Line 1455 of yacc.c  */
-#line 458 "voo.y"
+#line 482 "voo.y"
     {(yyval.nodeval)=createNewValueNode(NewNodeString((yyvsp[(1) - (1)].sval)));;}
     break;
 
   case 109:
 
 /* Line 1455 of yacc.c  */
-#line 459 "voo.y"
+#line 483 "voo.y"
     { if(mainScope.lookup((yyvsp[(1) - (1)].idval))!=NULL){(yyval.nodeval)=createNewIdNode((yyvsp[(1) - (1)].idval)); cout<<"str id "<<endl;} 
 			else {(yyval.nodeval)=NULL; errorDoesntExist((yyvsp[(1) - (1)].idval));} ;}
     break;
@@ -2465,35 +2489,37 @@ yyreduce:
   case 110:
 
 /* Line 1455 of yacc.c  */
-#line 465 "voo.y"
+#line 489 "voo.y"
     {
 		outLabel(switchLabels.top());
 		switchLabels.pop();
+		if(!switchIds.empty()) switchIds.pop();
 	;}
     break;
 
   case 111:
 
 /* Line 1455 of yacc.c  */
-#line 471 "voo.y"
+#line 496 "voo.y"
     {
 		int label = generateOneLabel();
 		switchLabels.push(label);
+		cout<<"ok start switch";
 	;}
     break;
 
   case 112:
 
 /* Line 1455 of yacc.c  */
-#line 477 "voo.y"
+#line 503 "voo.y"
     { if(mainScope.lookup((yyvsp[(1) - (1)].idval))!=NULL){(yyval.nodeval)=createNewIdNode((yyvsp[(1) - (1)].idval)); switchIds.push((yyval.nodeval)); cout<<"int id "<<endl;} 
-			else {(yyval.nodeval)=NULL; errorDoesntExist((yyvsp[(1) - (1)].idval));} ;}
+			else {(yyval.nodeval)=NULL; errorDoesntExist((yyvsp[(1) - (1)].idval));} cout<<"ok id switch"; ;}
     break;
 
   case 113:
 
 /* Line 1455 of yacc.c  */
-#line 479 "voo.y"
+#line 505 "voo.y"
     { if(mainScope.lookup((yyvsp[(1) - (1)].idval))!=NULL){(yyval.nodeval)=createNewIdNode((yyvsp[(1) - (1)].idval)); switchIds.push((yyval.nodeval)); cout<<"float id "<<endl;} 
 				  else {(yyval.nodeval)=NULL; errorDoesntExist((yyvsp[(1) - (1)].idval));} ;}
     break;
@@ -2501,7 +2527,7 @@ yyreduce:
   case 114:
 
 /* Line 1455 of yacc.c  */
-#line 481 "voo.y"
+#line 507 "voo.y"
     { if(mainScope.lookup((yyvsp[(1) - (1)].idval))!=NULL){(yyval.nodeval)=createNewIdNode((yyvsp[(1) - (1)].idval)); switchIds.push((yyval.nodeval)); cout<<"str id "<<endl;} 
 				else {(yyval.nodeval)=NULL; errorDoesntExist((yyvsp[(1) - (1)].idval));} ;}
     break;
@@ -2509,7 +2535,7 @@ yyreduce:
   case 115:
 
 /* Line 1455 of yacc.c  */
-#line 483 "voo.y"
+#line 509 "voo.y"
     { if(mainScope.lookup((yyvsp[(1) - (1)].idval))!=NULL){(yyval.nodeval)=createNewIdNode((yyvsp[(1) - (1)].idval)); switchIds.push((yyval.nodeval)); cout<<"bool id "<<endl;} 
 				else {(yyval.nodeval)=NULL; errorDoesntExist((yyvsp[(1) - (1)].idval));} ;}
     break;
@@ -2517,20 +2543,24 @@ yyreduce:
   case 118:
 
 /* Line 1455 of yacc.c  */
-#line 493 "voo.y"
+#line 519 "voo.y"
     {
 			int l=generateOneLabel();
 			brLabels.push(l);
-			NodeWithType* vv=createNewExprNode(eq,2,switchIds.top(),(yyvsp[(2) - (3)].nodeval)); 
-			generateQuad("EQ",switchIds.top(),(yyvsp[(2) - (3)].nodeval),vv);
-			generateBranchQuad("JFALSE",brLabels.top(),vv);
+			if(!switchIds.empty()){
+				NodeWithType* vv=createNewExprNode(eq,2,switchIds.top(),(yyvsp[(2) - (3)].nodeval)); 
+				if(vv!=NULL){
+					generateQuad("EQ",switchIds.top(),(yyvsp[(2) - (3)].nodeval),vv);
+					generateBranchQuad("JFALSE",brLabels.top(),vv);
+				}
+			}
 		;}
     break;
 
   case 120:
 
 /* Line 1455 of yacc.c  */
-#line 504 "voo.y"
+#line 534 "voo.y"
     {
 		generateBranchQuad("JMP",switchLabels.top(),NULL);
 		outLabel(brLabels.top());
@@ -2538,45 +2568,52 @@ yyreduce:
 	;}
     break;
 
+  case 121:
+
+/* Line 1455 of yacc.c  */
+#line 541 "voo.y"
+    {cout<<"ok def switch";;}
+    break;
+
   case 122:
 
 /* Line 1455 of yacc.c  */
-#line 514 "voo.y"
+#line 544 "voo.y"
     {(yyval.nodeval)=createNewValueNode(NewNodeInt((yyvsp[(1) - (1)].ival))); ;}
     break;
 
   case 123:
 
 /* Line 1455 of yacc.c  */
-#line 515 "voo.y"
+#line 545 "voo.y"
     {(yyval.nodeval)=createNewValueNode(NewNodeFloat((yyvsp[(1) - (1)].fval))); ;}
     break;
 
   case 124:
 
 /* Line 1455 of yacc.c  */
-#line 516 "voo.y"
+#line 546 "voo.y"
     {(yyval.nodeval)=createNewValueNode(NewNodeString((yyvsp[(1) - (1)].sval))); ;}
     break;
 
   case 126:
 
 /* Line 1455 of yacc.c  */
-#line 522 "voo.y"
+#line 552 "voo.y"
     { (yyval.nodeval)=createNewValueNode(NewNodeBool((yyvsp[(1) - (1)].bval))); /*cout<<"bool value"<<endl;*/ ;}
     break;
 
   case 127:
 
 /* Line 1455 of yacc.c  */
-#line 523 "voo.y"
+#line 553 "voo.y"
     { (yyval.nodeval)=createNewValueNode(NewNodeBool((yyvsp[(1) - (1)].bval))); /*cout<<"bool value"<<endl;*/ ;}
     break;
 
 
 
 /* Line 1455 of yacc.c  */
-#line 2580 "voo.tab.c"
+#line 2617 "voo.tab.c"
       default: break;
     }
   YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
@@ -2788,7 +2825,7 @@ yyreturn:
 
 
 /* Line 1675 of yacc.c  */
-#line 526 "voo.y"
+#line 556 "voo.y"
 
 
 ofstream quad;

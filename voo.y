@@ -393,9 +393,12 @@ for_loop:
 	FOR '(' for_assignment ',' start_bool_expr bool_expr end_bool_expr ')' '{' stmt '}' '(' for_assignment ')' ';' {
 		int temp =brLabels.top();
 		brLabels.pop();
-		generateBranchQuad("JMP",brLabels.top(),NULL);
-		outLabel(temp);
-		brLabels.pop();}
+		if($6!=NULL){
+			generateBranchQuad("JMP",brLabels.top(),NULL);
+			outLabel(temp);
+		}
+		brLabels.pop();
+	}
 	;
 	
 start_bool_expr:
@@ -404,19 +407,30 @@ start_bool_expr:
 	
 end_bool_expr:
 	//epsilon
-	{generateBranchQuad("JFALSE",brLabels.top(),boolRes.top()); boolRes.pop();}  ;
+	{ if(!boolRes.empty()){generateBranchQuad("JFALSE",brLabels.top(),boolRes.top()); boolRes.pop();} }  ;
 	
 for_assignment:
-	INT_ID EQUAL int_expr {generateQuad("STO",$3,NULL,createNewIdNode($1));} ;
+	INT_ID EQUAL int_expr {
+		if(mainScope.lookup($1)!=NULL){
+			if($3!=NULL){
+				generateQuad("STO",$3,NULL,createNewIdNode($1));
+				cout<< "ass for int id (var) -> INT_ID: " <<$1<<" with value "<<$3<<endl;
+			}
+		}
+		else errorDoesntExist($1);
+			 
+	} ;
 	
+		
 repeat_until_loop:
 	{int label=generateOneLabel(); outLabel(label); brLabels.push(label);}
 	REPEAT '{' stmt '}' UNTIL '(' bool_expr ')' ';' {
-		generateBranchQuad("JTRUE",brLabels.top(),boolRes.top()); 
-		boolRes.pop();
+		if(!boolRes.empty()){
+			generateBranchQuad("JTRUE",brLabels.top(),boolRes.top()); 
+			boolRes.pop();
+		}
 		brLabels.pop();
 	};
-
 
 
 bool_expr:
@@ -429,11 +443,18 @@ bool_expr:
 							cout << "LOGIC_AND " <<endl;
 						}
 					} | 
-	bool_expr LOGIC_OR bool_expr { cout << "LOGIC_OR " <<endl; } |
+	bool_expr LOGIC_OR bool_expr { 
+					$$=createNewExprNode(l_and,2,$1,$3);
+						if($$!=NULL){
+							generateQuad("OR",$1,$3,$$);
+							boolRes.push($$); 						
+							cout << "LOGIC_OR " <<endl;
+						}
+					} |
 	boolean { cout << "boolean " <<endl; } |
 	BOOL_ID { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); cout<<"bool id "<<endl;} 
 			  else {$$=NULL; errorDoesntExist($1);}  } |
-	bool_term {$$=$1;}|
+	bool_term { $$=$1;   if($$!=NULL) boolRes.push($$); 	}|
 	'(' bool_expr ')' { $$=$2;  cout << "Brackets " <<endl; }
 	;
 
@@ -465,17 +486,19 @@ switch_case:
 	start_switch '(' id ')' '{' case_stmts defaultt '}' {
 		outLabel(switchLabels.top());
 		switchLabels.pop();
+		if(!switchIds.empty()) switchIds.pop();
 	};
 	
 start_switch:
 	SWITCH {
 		int label = generateOneLabel();
 		switchLabels.push(label);
+		cout<<"ok start switch";
 	};
 
 id:
 	INT_ID { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); switchIds.push($$); cout<<"int id "<<endl;} 
-			else {$$=NULL; errorDoesntExist($1);} }
+			else {$$=NULL; errorDoesntExist($1);} cout<<"ok id switch"; }
 	| FLOAT_ID  { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); switchIds.push($$); cout<<"float id "<<endl;} 
 				  else {$$=NULL; errorDoesntExist($1);} }
 	| STR_ID  { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); switchIds.push($$); cout<<"str id "<<endl;} 
@@ -493,9 +516,13 @@ case_stmt:
 	CASE value ':' {
 			int l=generateOneLabel();
 			brLabels.push(l);
-			NodeWithType* vv=createNewExprNode(eq,2,switchIds.top(),$2); 
-			generateQuad("EQ",switchIds.top(),$2,vv);
-			generateBranchQuad("JFALSE",brLabels.top(),vv);
+			if(!switchIds.empty()){
+				NodeWithType* vv=createNewExprNode(eq,2,switchIds.top(),$2); 
+				if(vv!=NULL){
+					generateQuad("EQ",switchIds.top(),$2,vv);
+					generateBranchQuad("JFALSE",brLabels.top(),vv);
+				}
+			}
 		}
 		stmt done 
 	;
@@ -508,7 +535,7 @@ done:
 	};
 	
 defaultt:	
-	DEFAULT ':' stmt ;
+	DEFAULT ':' stmt {cout<<"ok def switch";};
 	
 value:
 	INT {$$=createNewValueNode(NewNodeInt($1)); }

@@ -14,10 +14,6 @@ f_gkg= 5.3 + 6.99 * 10.2 -9 +3.0;
 var s_ee4;
 s_ee = "kklsdakjsl" ;
 var i_o;
-var i_e;
-
-
-
 
 var i_hjk;
 var b_llll;
@@ -28,20 +24,35 @@ var s_yy;
 
 i_hjkkk = 5* (6 / 9)  <<  3 ;
 
-while(i_e==f_oo && s_ll != s_ee4){
-		i_kk = 5| ~ 4 & 7 << 2;
-}
-
-var i_e;
 var f_oo;
 
-while(i_e==f_oo && s_ll != s_ee4){
-		i_kk = 5| ~ 4 & 7 << 2;
-}
-
-var s_ee4;
 var i_kk;
 var s_ll;
-while(i_e==f_oo && s_ll != s_ee4){
-		i_kk = 5| ~ 4 & 7 << 2;
+var i_ll;
+
+var i_e;
+var s_en;
+var s_kk;
+var i_l;
+var f_hh;
+var f_hhh;
+if(s_ll==s_en && s_ll != s_ee4){
+	i_o=i_o+2;
+	if(f_hh==f_hhh){
+		i_hh=i_kk+6;
+	}
+	else{
+		i_hh=i_kk*6;
+	}
+	
 }
+else if(s_ll != s_en || s_ll != s_ee4){
+	i_l=i_o+66;
+}
+else if(b_llll){   $$need to handle this 
+	i_l=i_o/66;
+}
+else {
+	i_l=i_o-66;
+}
+i_ll=5*3;

@@ -1,22 +1,20 @@
 [main] voo 1000 (0) exception: trapped!
-[main] voo 1000 (0) exception: code 0xC0000005 at 0x405156
-[main] voo 1000 (0) exception: ax 0x0 bx 0x248F9E0 cx 0xFFFFFFFF dx 0x0
-[main] voo 1000 (0) exception: si 0xBFC16D8 di 0x248F990 bp 0x248F974 sp 0x248F974
+[main] voo 1000 (0) exception: code 0xC0000005 at 0x40513C
+[main] voo 1000 (0) exception: ax 0x1FC bx 0x248FF20 cx 0x1FC dx 0x1FC
+[main] voo 1000 (0) exception: si 0x248FA94 di 0x401000 bp 0x248FEF0 sp 0x248F9C4
 [main] voo 1000 (0) exception: exception is: STATUS_ACCESS_VIOLATION
 [main] voo 1000 (0) stack: Stack trace:
-[main] voo 1000 (0) stack: frame 0: sp = 0x248F380, pc = 0x6100A2C3
-[main] voo 1000 (0) stack: frame 1: sp = 0x248F3BC, pc = 0x779C9DF2
-[main] voo 1000 (0) stack: frame 2: sp = 0x248F3E0, pc = 0x779C9DC4
-[main] voo 1000 (0) stack: frame 3: sp = 0x248F4AC, pc = 0x779B0CB6
-[main] voo 1000 (0) stack: frame 4: sp = 0x248F974, pc = 0x4052A8
-[main] voo 1000 (0) stack: frame 5: sp = 0x248F99C, pc = 0x404244
-[main] voo 1000 (0) stack: frame 6: sp = 0x248FEF0, pc = 0x405A96
-[main] voo 1000 (0) stack: frame 7: sp = 0x248FF08, pc = 0x61004402
-[main] voo 1000 (1) stack: frame 8: sp = 0x248FF48, pc = 0x61004420
-[main] voo 1000 (0) stack: frame 9: sp = 0x248FF54, pc = 0x422C42
-[main] voo 1000 (0) stack: frame 10: sp = 0x248FF64, pc = 0x40103A
-[main] voo 1000 (0) stack: frame 11: sp = 0x248FF80, pc = 0x76E28654
-[main] voo 1000 (0) stack: frame 12: sp = 0x248FF94, pc = 0x779A4B17
-[main] voo 1000 (0) stack: frame 13: sp = 0x248FFDC, pc = 0x779A4AE7
-[main] voo 1000 (0) stack: frame 14: sp = 0x248FFEC, pc = 0x0
+[main] voo 1000 (0) stack: frame 0: sp = 0x248F3D0, pc = 0x6100A2C3
+[main] voo 1000 (0) stack: frame 1: sp = 0x248F40C, pc = 0x77809DF2
+[main] voo 1000 (0) stack: frame 2: sp = 0x248F430, pc = 0x77809DC4
+[main] voo 1000 (0) stack: frame 3: sp = 0x248F4FC, pc = 0x777F0CB6
+[main] voo 1000 (0) stack: frame 4: sp = 0x248FEF0, pc = 0x406156
+[main] voo 1000 (0) stack: frame 5: sp = 0x248FF08, pc = 0x61004402
+[main] voo 1000 (0) stack: frame 6: sp = 0x248FF48, pc = 0x61004420
+[main] voo 1000 (0) stack: frame 7: sp = 0x248FF54, pc = 0x423302
+[main] voo 1000 (0) stack: frame 8: sp = 0x248FF64, pc = 0x40103A
+[main] voo 1000 (0) stack: frame 9: sp = 0x248FF80, pc = 0x77568654
+[main] voo 1000 (0) stack: frame 10: sp = 0x248FF94, pc = 0x777E4B17
+[main] voo 1000 (0) stack: frame 11: sp = 0x248FFDC, pc = 0x777E4AE7
+[main] voo 1000 (0) stack: frame 12: sp = 0x248FFEC, pc = 0x0
 [main] voo 1000 (0) stack: End of stack trace
