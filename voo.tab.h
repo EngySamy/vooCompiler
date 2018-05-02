@@ -72,7 +72,8 @@
      REPEAT = 288,
      UNTIL = 289,
      DEFAULT = 290,
-     DONE = 291
+     DONE = 291,
+     ENDL = 292
    };
 #endif
 
@@ -83,7 +84,7 @@ typedef union YYSTYPE
 {
 
 /* Line 1676 of yacc.c  */
-#line 62 "voo.y"
+#line 67 "voo.y"
 
 	int ival;
 	float fval;
@@ -95,7 +96,7 @@ typedef union YYSTYPE
 
 
 /* Line 1676 of yacc.c  */
-#line 99 "voo.tab.h"
+#line 100 "voo.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

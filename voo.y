@@ -18,6 +18,7 @@ using namespace std;
 extern "C" int yylex();
 extern "C" int yyparse();
 extern "C" FILE *yyin;
+extern int line_num;
  
 void yyerror(const char *s);
 
@@ -28,6 +29,7 @@ stack<int> ifElseLabels;
 stack<int> switchLabels;
 stack<NodeWithType*> switchIds;
 stack<NodeWithType*> boolRes;
+queue<char *> unInit;
 
 void generateQuad(string op , NodeWithType * arg1 , NodeWithType * arg2 ,NodeWithType * res );
 void generateBranchQuad(string , int , NodeWithType * );
@@ -35,11 +37,14 @@ void generateLabelPair();
 int generateOneLabel();
 void outLabel(int);
 
-void newSymbolRecord( char *, IdType , bool); 
+void newSymbolRecord( char *, IdType , bool , bool);
+void updateSymbolRecordInit(char *); 
+void updateSymbolRecordUsed(char *);
 bool updateSymbolRecord(char *, bool , NodeWithType* ) ;
-//bool searchSymbolRecord( char * );
+
 void errorExistsBefore(char *);
 void errorDoesntExist(char *);
+void errorUnInitVar();
 
 
 Node * NewNodeFloat(float );
@@ -73,7 +78,7 @@ int cntNodes=0,cntLabels=0;
 %token <ival> INT //
 %token <fval> FLOAT
 %token <sval> STRING
-%token <idval> BOOL_ID FLOAT_ID STR_ID INT_ID 
+%token <idval> BOOL_ID FLOAT_ID STR_ID INT_ID error
 %token CONST VAR EQUAL 
 %token <bval> TRUE FALSE 
 
@@ -93,190 +98,222 @@ int cntNodes=0,cntLabels=0;
 %right POW
 %right LOGIC_NOT '~'
 
-%token IF ELSE FOR WHILE SWITCH CASE REPEAT UNTIL DEFAULT DONE
+%token IF ELSE FOR WHILE SWITCH CASE REPEAT UNTIL DEFAULT DONE ENDL
 
-%type <nodeval> int_expr float_expr float_int_expr bool_expr compare_opd boolean str_expr bool_term id value
+%type <nodeval> int_expr float_expr float_int_expr bool_expr compare_opd boolean str_expr bool_term id value for_assignment
 
 %%
 // this is the actual grammar that bison will parse
 
 stmt:
-	variable stmt | constant_stmt stmt | assignment stmt | if_else_if_else_stmt stmt | for_loop stmt | while_loop stmt | repeat_until_loop stmt | switch_case stmt |
-	variable | constant_stmt | assignment | if_else_if_else_stmt | for_loop | while_loop | repeat_until_loop | switch_case ;
+	stmt variable  | stmt constant_stmt  | stmt assignment  | stmt if_else_if_else_stmt  | stmt for_loop  | stmt while_loop  | stmt repeat_until_loop  | stmt switch_case  |
+	variable | constant_stmt | assignment | if_else_if_else_stmt | for_loop | while_loop  | repeat_until_loop | switch_case ;
 
-/*declaration:
-	variable | constant_stmt ;
-	*/
 variable: 
-	VAR id1 ';' |
-	VAR decl_assign 
+	VAR id1 ';' endls |
+	VAR decl_assign endls |
+	VAR error ';' {cout<<"At Line: "<<line_num<<" Not a valid var statement to declare !"<<endl;} endls  //handle syntax error
+	
 	;
 id1:
 	INT_ID { 
-				if(mainScope.lookup($1)==NULL){
-					newSymbolRecord($1,integer,true);
-					mainScope.printAll();
-					cout<< "ass for int id (var) -> INT_ID: " <<$1<<endl;
+				if( mainScope.checkIteratorAtEnd(mainScope.lookup($1))){  //check if this var hasn't been declared before , not to declare 2 var with the same name 
+					newSymbolRecord($1,integer,true,false);
+					//mainScope.printAll();
+					cout<< "decl for int id (var) -> INT_ID: " <<$1<<endl;
 				}
 				else errorExistsBefore($1);
 			} |
 	FLOAT_ID  {
-				if(mainScope.lookup($1)==NULL){
-					newSymbolRecord($1,floatt,true);
-					mainScope.printAll();
-					cout<< "ass for float id (var) -> FLOAT_ID: " <<$1<<endl;
+				if(mainScope.checkIteratorAtEnd(mainScope.lookup($1))){
+					newSymbolRecord($1,floatt,true,false);
+					//mainScope.printAll();
+					cout<< "decl for float id (var) -> FLOAT_ID: " <<$1<<endl;
 				}
 				else errorExistsBefore($1);
 			  } |
 	STR_ID  { 
-				if(mainScope.lookup($1)==NULL){
-					newSymbolRecord($1,str,true);
-					mainScope.printAll();
-					cout<< "ass for string id (var) -> STR_ID: " <<$1<<endl;
+				if(mainScope.checkIteratorAtEnd(mainScope.lookup($1))){
+					newSymbolRecord($1,str,true,false);
+					//mainScope.printAll();
+					cout<< "decl for string id (var) -> STR_ID: " <<$1<<endl;
 				}
 				else errorExistsBefore($1);
 			} |
 	BOOL_ID  { 
-				if(mainScope.lookup($1)==NULL){
-					newSymbolRecord($1,boolean,true);
-					mainScope.printAll();
-					cout<< "ass for bool id (var) -> BOOL_ID: " <<$1<<endl;
+				if(mainScope.checkIteratorAtEnd(mainScope.lookup($1))){
+					newSymbolRecord($1,boolean,true,false);
+					//mainScope.printAll();
+					cout<< "decl for bool id (var) -> BOOL_ID: " <<$1<<endl;
 				}
 				else errorExistsBefore($1);
 			}
 	;
 
-decl_assign:	
+decl_assign:
+	
 	INT_ID EQUAL int_expr ';' { 
-				if(mainScope.lookup($1)==NULL){
-					if($3!=NULL){
-						newSymbolRecord($1,integer,true);
-						generateQuad("STO",$3,NULL,createNewIdNode($1));
-						mainScope.printAll();
-						cout<< "ass for int id (var) -> INT_ID: " <<$1<<" with value "<<$3<<endl;
+				if(mainScope.checkIteratorAtEnd(mainScope.lookup($1))){ //check if this var hasn't been declared before , not to declare 2 var with the same name 
+					if($3!=NULL){ //check if the variables used in the expression are valid and exist  
+						if(unInit.empty()){
+							newSymbolRecord($1,integer,true,true);
+							generateQuad("STO",$3,NULL,createNewIdNode($1));
+							//mainScope.printAll();
+							cout<< "ass for int id (var) -> INT_ID: " <<$1<<" with value "<<$3<<endl;
+						}
+						else errorUnInitVar();
 					}
 				}
 				else errorExistsBefore($1);	
 			} |
 	FLOAT_ID EQUAL float_int_expr ';' {
-				if(mainScope.lookup($1)==NULL){
+				if(mainScope.checkIteratorAtEnd(mainScope.lookup($1))){
 					if($3!=NULL){
-						newSymbolRecord($1,floatt,true);
+						newSymbolRecord($1,floatt,true,true);
 						generateQuad("STO",$3,NULL,createNewIdNode($1));
-						mainScope.printAll();
+						//mainScope.printAll();
 						cout<< "ass for float id (var) -> FLOAT_ID: " <<$1<<" with value "<<$3<<endl;
 					}
 				}
 				else errorExistsBefore($1);
 			}|
 	STR_ID EQUAL str_expr ';' { 
-				if(mainScope.lookup($1)==NULL){
+				if(mainScope.checkIteratorAtEnd(mainScope.lookup($1))){
 					if($3!=NULL){
-						newSymbolRecord($1,str,true);
-						mainScope.printAll();
+						newSymbolRecord($1,str,true,true);
+						//mainScope.printAll();
 						cout<< "ass for string id (var) -> STR_ID: " <<$1<<" with value "<<$3<<endl;
 					}
 				}
 				else errorExistsBefore($1);
 			}|
 	BOOL_ID EQUAL bool_expr ';' { 
-				if(mainScope.lookup($1)==NULL){
+				if(mainScope.checkIteratorAtEnd(mainScope.lookup($1))){
 					if($3!=NULL){
-						newSymbolRecord($1,boolean,true);
+						newSymbolRecord($1,boolean,true,true);
 						generateQuad("STO",$3,NULL,createNewIdNode($1));
-						mainScope.printAll();
+						//mainScope.printAll();
 						cout<< "ass for bool id (var) -> BOOL_ID: " <<$1<<endl;
 					}
 				}
 				else errorExistsBefore($1);
-			}
+			}//|
+	//idds EQUAL error '\n' {cout <<"Type of identifier doesn't match expression type!"<<endl;}|				
+			
 	;
-	
+/*idds:
+	INT_ID | FLOAT_ID | STR_ID | BOOL_ID ;
+*/	
 constant_stmt:
-	CONST constant;
+	CONST constant endls |
+	CONST error ';' {cout<<"At Line: "<<line_num<<"Not a valid const statement to declare !"<<endl;} endls //handle syntax error;
 	
 constant:
 	INT_ID EQUAL INT ';' { 
-						if(mainScope.lookup($1)==NULL){
+						if(mainScope.checkIteratorAtEnd(mainScope.lookup($1))){  //check if this var hasn't been declared before , not to declare 2 var with the same name 
 							NodeWithType* nt=createNewValueNode(NewNodeInt($3));
-							newSymbolRecord($1,integer,false);
+							newSymbolRecord($1,integer,false,true);
 							generateQuad("STO",nt,NULL,createNewIdNode($1));
-							mainScope.printAll();
-							cout<< "ass for int id (const) -> INT_ID: " <<$1<<" with value "<<$3<<endl;
+							//mainScope.printAll();
+							cout<< "ass for int id (const) -> INT_ID: " <<$1<<endl;
 						}
 						else errorExistsBefore($1);	
 					} |
 	FLOAT_ID EQUAL FLOAT ';' { 
-						if(mainScope.lookup($1)==NULL){	
+						if(mainScope.checkIteratorAtEnd(mainScope.lookup($1))){	
 							NodeWithType* nt=createNewValueNode(NewNodeFloat($3));
-							newSymbolRecord($1,floatt,false);
+							newSymbolRecord($1,floatt,false,true);
 							generateQuad("STO",nt,NULL,createNewIdNode($1));
-							mainScope.printAll();
-							cout<< "ass for float id (const) -> FLOAT_ID: " <<$1<<" with value "<<$3<<endl;
+							//mainScope.printAll();
+							cout<< "ass for float id (const) -> FLOAT_ID: " <<$1<<endl;
 						}
 						else errorExistsBefore($1);	
 					}|
 	STR_ID EQUAL STRING ';' {
-						if(mainScope.lookup($1)==NULL){	
+						if(mainScope.checkIteratorAtEnd(mainScope.lookup($1))){	
 							NodeWithType* nt=createNewValueNode(NewNodeString($3));
-							newSymbolRecord($1,str,false);
+							newSymbolRecord($1,str,false,true);
 							generateQuad("STO",nt,NULL,createNewIdNode($1));
-							mainScope.printAll();
-							cout<< "ass for str id (const) -> STR_ID: " <<$1<<" with value "<<$3<<endl;
+							//mainScope.printAll();
+							cout<< "ass for str id (const) -> STR_ID: " <<$1<<endl;
 						}
 						else errorExistsBefore($1);
 					}|
 	BOOL_ID EQUAL boolean ';' {
-						if(mainScope.lookup($1)==NULL){	
+						if(mainScope.checkIteratorAtEnd(mainScope.lookup($1))){	
 							NodeWithType* nt=createNewValueNode(NewNodeBool($3));
-							newSymbolRecord($1,boolean,false);
+							newSymbolRecord($1,boolean,false,true);
 							generateQuad("STO",nt,NULL,createNewIdNode($1));
-							mainScope.printAll();
-							cout<< "ass for bool id (const) -> BOOL_ID: " <<$1<<" with value "<<$3<<endl;
+							//mainScope.printAll();
+							cout<< "ass for bool id (const) -> BOOL_ID: " <<$1<<endl;
 						}
 						else errorExistsBefore($1);
 					}
 	;
 	
 assignment:
-	INT_ID EQUAL int_expr ';' { 
-				if(mainScope.lookup($1)!=NULL){
-					if($3!=NULL){
-						generateQuad("STO",$3,NULL,createNewIdNode($1));
-						cout<< "ass for int id (var) -> INT_ID: " <<$1<<" with value "<<$3<<endl;
+	INT_ID EQUAL int_expr ';' endls { 
+				if(!mainScope.checkIteratorAtEnd(mainScope.lookup($1))){  //check if the var has been declared before, to use it 
+					if($3!=NULL){ 				//check if the variables used in the expression are valid and exist
+						if(unInit.empty()){
+							updateSymbolRecordInit($1);
+							generateQuad("STO",$3,NULL,createNewIdNode($1));
+							cout<< "ass for int id (var) -> INT_ID: " <<$1<<endl;
+						}
+						else errorUnInitVar();
 					}
 				}
 				else errorDoesntExist($1);
 			} |
-	FLOAT_ID EQUAL float_int_expr ';' { 
-				if(mainScope.lookup($1)!=NULL){
+	FLOAT_ID EQUAL float_int_expr ';' endls { 
+				if(!mainScope.checkIteratorAtEnd(mainScope.lookup($1))){
 					if($3!=NULL){
-						generateQuad("STO",$3,NULL,createNewIdNode($1));
-						cout<< "ass for float id (var) -> FLOAT_ID: " <<$1<<" with value "<<$3<<endl;
+						if(unInit.empty()){
+							updateSymbolRecordInit($1);
+							generateQuad("STO",$3,NULL,createNewIdNode($1));
+							cout<< "ass for float id (var) -> FLOAT_ID: " <<$1<<endl;
+						}
+						else errorUnInitVar();
 					}
 				}
 				else errorDoesntExist($1);		
 			}|
-	STR_ID EQUAL str_expr ';' { 
-				if(mainScope.lookup($1)!=NULL){
+	STR_ID EQUAL str_expr ';' endls { 
+				if(!mainScope.checkIteratorAtEnd(mainScope.lookup($1))){
 					if($3!=NULL){
-					cout<< "ass for string id (var) -> STR_ID: " <<$1<<" with value "<<$3<<endl;
+						if(unInit.empty()){
+							updateSymbolRecordInit($1);
+							cout<< "ass for string id (var) -> STR_ID: " <<$1<<endl;
+						}
+						else errorUnInitVar();
 					}
 				}
 				else errorDoesntExist($1);		
 			}|
-	BOOL_ID EQUAL bool_expr ';' { 
-				if(mainScope.lookup($1)!=NULL){
+	BOOL_ID EQUAL bool_expr ';' endls { 
+				if(!mainScope.checkIteratorAtEnd(mainScope.lookup($1))){
 					if($3!=NULL){
-						generateQuad("STO",boolRes.top(),NULL,createNewIdNode($1));
-						boolRes.pop();
-						cout<< "ass for bool id (var) -> BOOL_ID: " <<$1<<" with value "<<$3<<endl;
+						if(unInit.empty()){
+							updateSymbolRecordInit($1);
+							generateQuad("STO",boolRes.top(),NULL,createNewIdNode($1));
+							boolRes.pop();
+							cout<< "ass for bool id (var) -> BOOL_ID: " <<$1<<endl;
+						}
+						else errorUnInitVar();
 					}
 				}
 				else errorDoesntExist($1);		
-			}
+			} |
+	//handle errors 
+	INT_ID EQUAL error ';' {cout<<"At Line: "<<line_num<<"Not a valid int expression to use !" <<endl;} endls |
+	FLOAT_ID EQUAL error ';' {cout<<"At Line: "<<line_num<<"Not a valid float expression to use !" <<endl;} endls |
+	STR_ID EQUAL error ';' {cout<<"At Line: "<<line_num<<"Not a valid string expression to use !" <<endl;} endls |
+	BOOL_ID EQUAL error ';' {cout<<"At Line: "<<line_num<<"Not a valid bool expression to use !"<<endl;} endls |
+	error EQUAL exprr ';' {cout<<"At Line: "<<line_num<<"Not a valid identifier to use !" <<endl;} endls //|
+	//error EQUAL error ';' {cout<<"Not a valid assignment expression to use !" <<endl;}
 	;
-
+exprr :
+	str_expr | bool_expr | int_expr | float_expr ;
 
 int_expr:
 	int_expr '+' int_expr { $$=createNewExprNode(pls,2,$1,$3); if($$!=NULL){generateQuad("ADD",$1,$3,$$); cout << "PLUS "  <<endl;} } | 
@@ -293,8 +330,14 @@ int_expr:
 	int_expr BITWISE_SHIFT_RIGHT int_expr { $$=createNewExprNode(b_shft_l,2,$1,$3); if($$!=NULL){generateQuad("SHFTR",$1,$3,$$); cout << "BITWISE_SHIFT_RIGHT: " <<endl; }} |  //<< $$=$1>>$3 
 	
 	'(' int_expr ')' { $$=$2;	cout << "Brackets  " <<endl; } | 
-	INT { $$=createNewValueNode(NewNodeInt($1)); cout<<"int value"<<endl; } |
-	INT_ID { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); cout<<"int id "<<endl;} 
+	INT { $$=createNewValueNode(NewNodeInt($1)); } |
+	INT_ID { 
+		map<char*,SymRec>::iterator it=mainScope.lookup($1);
+		if(!mainScope.checkIteratorAtEnd(it)){
+			$$=createNewIdNode($1); 
+			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
+			updateSymbolRecordUsed($1);
+			} 
 		else {$$=NULL; errorDoesntExist($1);} }
 	;
 
@@ -321,8 +364,14 @@ float_expr:
 	int_expr POW float_expr { $$=createNewExprNode(pw,2,$1,$3);  if($$!=NULL){generateQuad("POW",$1,$3,$$);cout << "POW: " << $$ << endl; }}| 
 	
 	'(' float_expr ')' { $$=$2; cout << "Brackets  " <<endl; } |
-	FLOAT { $$=createNewValueNode(NewNodeFloat($1)); cout<<"float value"<<endl; }  | 
-	FLOAT_ID  { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); cout<<"float id "<<endl;} 
+	FLOAT { $$=createNewValueNode(NewNodeFloat($1));  }  | 
+	FLOAT_ID  { 
+		map<char*,SymRec>::iterator it=mainScope.lookup($1);
+		if(!mainScope.checkIteratorAtEnd(it)){
+			$$=createNewIdNode($1);
+			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
+			updateSymbolRecordUsed($1);
+			} 
 		else {$$=NULL; errorDoesntExist($1);}  }
 	;
 	
@@ -330,9 +379,15 @@ float_int_expr:
 	float_expr | int_expr ;
 	
 str_expr:
-	STRING { $$=createNewValueNode(NewNodeString($1)); cout<<"string value"<<endl; }  |  
-	STR_ID { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); cout<<"string id"<<endl; }
-		else {$$=NULL; errorDoesntExist($1);}}
+	STRING { $$=createNewValueNode(NewNodeString($1));  }  |  
+	STR_ID { 
+		map<char*,SymRec>::iterator it=mainScope.lookup($1);
+		if(!mainScope.checkIteratorAtEnd(it)){
+			$$=createNewIdNode($1);
+			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
+			updateSymbolRecordUsed($1);
+			} 
+		else {$$=NULL; errorDoesntExist($1);}  }
 	;
 
 if_else_if_else_stmt:
@@ -372,7 +427,7 @@ else_if_stmt:
 	;
 	
 while_loop:
-	WHILE start_while_if bool_expr end_while_if '{' stmt '}' {
+	WHILE start_while_if bool_expr end_while_if '{' endls stmt '}' ';' endls {
 		int temp =brLabels.top();
 		brLabels.pop();
 		if($3!=NULL){
@@ -380,7 +435,10 @@ while_loop:
 			outLabel(temp);
 		}
 		brLabels.pop();	
-	}
+	}|
+	//handle error 
+	//WHILE '(' error ')' '{' stmt '}' {cout<<"Not a valid boolean expression in while statement !"<<endl;}|
+	WHILE error ';' { cout<<"At Line: "<<line_num<<" Not a valid while statement !"<<endl;} endls // char* cc="Not a valid while statement ! from yyerror"; yyerror(cc);
 	;
 	
 start_while_if:
@@ -390,7 +448,7 @@ end_while_if:
 	')' { if(!boolRes.empty()){generateBranchQuad("JFALSE",brLabels.top(),boolRes.top()); boolRes.pop();} }  ;
 	
 for_loop:
-	FOR '(' for_assignment ',' start_bool_expr bool_expr end_bool_expr ')' '{' stmt '}' '(' for_assignment ')' ';' {
+	FOR '(' for_assignment ',' start_bool_expr bool_expr end_bool_expr ')' '{' endls stmt '}' '(' for_assignment ')' ';' endls {
 		int temp =brLabels.top();
 		brLabels.pop();
 		if($6!=NULL){
@@ -398,7 +456,8 @@ for_loop:
 			outLabel(temp);
 		}
 		brLabels.pop();
-	}
+	} |
+	FOR error { cout<<"At Line: "<<line_num<<" Not a valid for statement !"<<endl;} ';' endls
 	;
 	
 start_bool_expr:
@@ -411,27 +470,33 @@ end_bool_expr:
 	
 for_assignment:
 	INT_ID EQUAL int_expr {
-		if(mainScope.lookup($1)!=NULL){
-			if($3!=NULL){
-				generateQuad("STO",$3,NULL,createNewIdNode($1));
-				cout<< "ass for int id (var) -> INT_ID: " <<$1<<" with value "<<$3<<endl;
-			}
-		}
-		else errorDoesntExist($1);
+		map<char*,SymRec>::iterator it=mainScope.lookup($1);
+		if(!mainScope.checkIteratorAtEnd(it)){
+			$$=createNewIdNode($1); 
+			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
+			updateSymbolRecordUsed($1);
+			} 
+		else {$$=NULL; errorDoesntExist($1);}
 			 
 	} ;
 	
-		
+
+			
 repeat_until_loop:
-	{int label=generateOneLabel(); outLabel(label); brLabels.push(label);}
-	REPEAT '{' stmt '}' UNTIL '(' bool_expr ')' ';' {
+	start_repeat '{' endls stmt '}' UNTIL '(' bool_expr ')' ';' endls {
 		if(!boolRes.empty()){
 			generateBranchQuad("JTRUE",brLabels.top(),boolRes.top()); 
 			boolRes.pop();
 		}
 		brLabels.pop();
-	};
+	} |
+	//handle syntax error
+	REPEAT error ';' { cout<<"At Line: "<<line_num<<" Not a valid repeat until statement !"<<endl;} endls
+	;
+	
 
+start_repeat:
+	REPEAT {int label=generateOneLabel(); outLabel(label); brLabels.push(label);} ;
 
 bool_expr:
 	LOGIC_NOT bool_expr { cout << "LOGIC_NOT " <<endl; } |
@@ -452,8 +517,15 @@ bool_expr:
 						}
 					} |
 	boolean { cout << "boolean " <<endl; } |
-	BOOL_ID { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); cout<<"bool id "<<endl;} 
-			  else {$$=NULL; errorDoesntExist($1);}  } |
+	BOOL_ID { 
+		map<char*,SymRec>::iterator it=mainScope.lookup($1);
+		if(!mainScope.checkIteratorAtEnd(it)){
+			$$=createNewIdNode($1); 
+			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
+			updateSymbolRecordUsed($1);
+		} 
+		else {$$=NULL; errorDoesntExist($1);}  } |
+	
 	bool_term { $$=$1;   if($$!=NULL) boolRes.push($$); 	}|
 	'(' bool_expr ')' { $$=$2;  cout << "Brackets " <<endl; }
 	;
@@ -468,17 +540,35 @@ bool_term:
 	compare_opd SM compare_opd { $$=createNewExprNode(sm,2,$1,$3); if($$!=NULL){generateQuad("SM",$1,$3,$$); cout << "SM " <<endl; }} | 
 	compare_opd SM_EQ compare_opd { $$=createNewExprNode(sme,2,$1,$3); if($$!=NULL){generateQuad("SM_EQ",$1,$3,$$); cout << "SM_EQ " <<endl; }} 
 	;
-	
+
 compare_opd:
 	INT {$$=createNewValueNode(NewNodeInt($1));}|
-	INT_ID { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); cout<<"int id "<<endl;} 
-			else {$$=NULL; errorDoesntExist($1);} }|
+	INT_ID { 
+		map<char*,SymRec>::iterator it=mainScope.lookup($1);
+		if(!mainScope.checkIteratorAtEnd(it)){
+			$$=createNewIdNode($1); 
+			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
+			updateSymbolRecordUsed($1);
+		} 
+		else {$$=NULL; errorDoesntExist($1);}  }|
 	FLOAT {$$=createNewValueNode(NewNodeFloat($1)); } |
-	FLOAT_ID { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); cout<<"float id "<<endl;} 
-				else {$$=NULL; errorDoesntExist($1);} }|
+	FLOAT_ID { 
+		map<char*,SymRec>::iterator it=mainScope.lookup($1);
+		if(!mainScope.checkIteratorAtEnd(it)){
+			$$=createNewIdNode($1); 
+			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
+			updateSymbolRecordUsed($1);
+		} 
+		else {$$=NULL; errorDoesntExist($1);}  }|
 	STRING {$$=createNewValueNode(NewNodeString($1));}|
-	STR_ID { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); cout<<"str id "<<endl;} 
-			else {$$=NULL; errorDoesntExist($1);} }
+	STR_ID { 
+		map<char*,SymRec>::iterator it=mainScope.lookup($1);
+		if(!mainScope.checkIteratorAtEnd(it)){
+			$$=createNewIdNode($1); 
+			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
+			updateSymbolRecordUsed($1);
+		} 
+		else {$$=NULL; errorDoesntExist($1);}  }
 	; 
 
 	
@@ -497,14 +587,39 @@ start_switch:
 	};
 
 id:
-	INT_ID { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); switchIds.push($$); cout<<"int id "<<endl;} 
-			else {$$=NULL; errorDoesntExist($1);} cout<<"ok id switch"; }
-	| FLOAT_ID  { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); switchIds.push($$); cout<<"float id "<<endl;} 
-				  else {$$=NULL; errorDoesntExist($1);} }
-	| STR_ID  { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); switchIds.push($$); cout<<"str id "<<endl;} 
-				else {$$=NULL; errorDoesntExist($1);} }
-	| BOOL_ID  { if(mainScope.lookup($1)!=NULL){$$=createNewIdNode($1); switchIds.push($$); cout<<"bool id "<<endl;} 
-				else {$$=NULL; errorDoesntExist($1);} }
+	INT_ID { 
+		map<char*,SymRec>::iterator it=mainScope.lookup($1);
+		if(!mainScope.checkIteratorAtEnd(it)){
+			$$=createNewIdNode($1); 
+			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
+			updateSymbolRecordUsed($1);
+		} 
+		else {$$=NULL; errorDoesntExist($1);}  }
+	| FLOAT_ID  { 
+		map<char*,SymRec>::iterator it=mainScope.lookup($1);
+		if(!mainScope.checkIteratorAtEnd(it)){
+			$$=createNewIdNode($1); 
+			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
+			updateSymbolRecordUsed($1);
+		} 
+		else {$$=NULL; errorDoesntExist($1);} }
+	| STR_ID  { 
+		map<char*,SymRec>::iterator it=mainScope.lookup($1);
+		if(!mainScope.checkIteratorAtEnd(it)){
+			$$=createNewIdNode($1); 
+			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
+			updateSymbolRecordUsed($1);
+		} 
+		else {$$=NULL; errorDoesntExist($1);} }
+		
+	| BOOL_ID  { 
+		map<char*,SymRec>::iterator it=mainScope.lookup($1);
+		if(!mainScope.checkIteratorAtEnd(it)){
+			$$=createNewIdNode($1); 
+			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
+			updateSymbolRecordUsed($1);
+		} 
+		else {$$=NULL; errorDoesntExist($1);} }
 	;
 	
 case_stmts:
@@ -548,8 +663,11 @@ value:
 boolean:
 	TRUE { $$=createNewValueNode(NewNodeBool($1)); /*cout<<"bool value"<<endl;*/ } | 
 	FALSE { $$=createNewValueNode(NewNodeBool($1)); /*cout<<"bool value"<<endl;*/ } ;
-	
-	
+
+endls:
+	endls ENDL
+	| ENDL 
+	;	
 %%
 
 ofstream quad;
@@ -579,7 +697,7 @@ void generateQuad(string op , NodeWithType * arg1 , NodeWithType * arg2 , NodeWi
 	
 	quad << endl;	
 	lineNo++;
-	cout<<"quad generated"<<endl;
+	//cout<<"quad generated"<<endl;
 }
 
 void generateBranchQuad(string br , int label ,  NodeWithType * cond){
@@ -607,29 +725,49 @@ void outLabel(int label){
 	quad<<"L" <<label<<": " <<endl;
 }
 
-void newSymbolRecord( char * name, IdType ty, bool v_c ){
+void newSymbolRecord( char * name, IdType ty, bool v_c, bool init ){
 	SymRec rec ;
 	rec.typ=ty;
 	rec.VarConst=v_c;
+	rec.init=init;
+	rec.used=false;
 	//rec.value=vlu;
 	mainScope.insert(name,&rec); 
 }
 
-/*bool searchSymbolRecord( char * name){
-	SymRec* s=mainScope.lookup(name);
-	if(s==NULL) return false;
-	else {
-		
-		return true;
-	}
+void updateSymbolRecordInit(char * name){
+	map<char*,SymRec>::iterator it =mainScope.lookup(name);
+	it->second.init=true;
 }
-*/
+
+void updateSymbolRecordUsed(char * name){
+	map<char*,SymRec>::iterator it =mainScope.lookup(name);
+	it->second.used=true;
+}
+
 void errorExistsBefore(char * name){
 	cout<<"There exists a variable with the same name! '"<< name <<"'"<<endl;
 }
 
 void errorDoesntExist(char * name){
 	cout<<"This variable has not been declared ! '"<< name <<"'"<<endl;
+}
+
+void errorUnInitVar(){
+	while(!unInit.empty()){
+		cout<<"This variable is used before it's initialized '"<< unInit.front() <<"'"<<endl;
+		unInit.pop();
+	}
+}
+
+void printUnUsedVar(){
+	cout<<"These variables are declared but not used:"<<endl;
+	map<char*,SymRec>::iterator it=mainScope.firstSymRec();
+	while(!mainScope.checkIteratorAtEnd(it)){
+		if(it->second.used==false)
+			cout<<it->first<<endl;
+		++it;
+	}
 }
 
 /*bool updateSymbolRecord(char * name, bool v_c , NodeWithType* vlu  ) {
@@ -723,7 +861,9 @@ NodeWithType * createNewIdNode(char* idd){
 }
 
 NodeWithType * createNewExprNode(oprt op, int n, NodeWithType* oprd1, NodeWithType* oprd2 ){
-	if(oprd1==NULL || oprd2 ==NULL)
+	if(n==2 &&( oprd1==NULL || oprd2 ==NULL))
+		return NULL;
+	else if(n==1 &&oprd1==NULL)
 		return NULL;
 	expr * ex=new expr();
 	ex->opt=op;
@@ -742,7 +882,7 @@ NodeWithType * createNewExprNode(oprt op, int n, NodeWithType* oprd1, NodeWithTy
 
 int main(int, char**) {
 	// open a file handle to a particular file:
-	FILE *myfile = fopen("sample.voo", "r");
+	FILE *myfile = fopen("sample1.voo", "r");
 	// make sure it is valid:
 	if (!myfile) {
 		cout << "I can't open sample.voo!" << endl;
@@ -759,13 +899,16 @@ int main(int, char**) {
 		yyparse();
 		//quadraple();
 	} while (!feof(yyin));
-	
+	mainScope.printAll();
+	printUnUsedVar();
 	quad.close();
 	
 }
 
 void yyerror(const char *s) {
-	cout << "EEK, parse error!  Message: " << s << endl;
+	//cout << "EEK, parse error!  on line: " << line_num << " Message: " << s << endl;
+	//cout << "EEK, parse error!  " << " Message: " << s << endl;
+	cout<<"Syntax Error "<< endl;
 	// might as well halt now:
-	exit(-1);
+	//exit(-1);
 }

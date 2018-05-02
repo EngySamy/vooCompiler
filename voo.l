@@ -6,6 +6,7 @@ using namespace std;
 #define YY_DECL extern "C" int yylex()
 
 #include "voo.tab.h"  // to get the token types that we return
+int line_num = 1;
 
 %}
 %%
@@ -44,7 +45,9 @@ using namespace std;
 
 
 
-[ \t\n]           ;
+[ \t]           ;
+
+\n 		{ ++line_num; return ENDL; }
 [-+*/%~(){};:,|&] { return *yytext;}
 [0-9]+\.[0-9]+ { 
 	yylval.fval = atof(yytext);
@@ -87,6 +90,6 @@ b\_[a-zA-Z\_][a-zA-Z0-9\_]*	{
 	yylval.sval = strdup(yytext);
 	return STRING;
 }
-$$.*\\n  ; //comment
+$$.*\n  ; //comment
 
 %%

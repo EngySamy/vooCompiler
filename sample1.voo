@@ -1,0 +1,5 @@
+var i_x1;
+var i_x2;
+
+var i_x3=5;
+i_x1 = 10 - i_x3 / 12 + 6;

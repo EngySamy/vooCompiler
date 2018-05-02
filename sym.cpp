@@ -34,23 +34,42 @@ bool Scope::insert(char * sym, SymRec *ptr) {
 		return false;
 }
 
-SymRec *Scope::lookup(char * sym) {
+map<char*,SymRec>::iterator Scope::lookup(char * sym) {
 	/*if(symbols.find(sym) != symbols.end()) {
 		return &symbols[sym];
 	} else
 		return NULL;
 	*/
 	string symm(sym);
-	for (map<char*,SymRec>::iterator it=symbols.begin(); it!=symbols.end(); ++it){
-		string current(it->first);
+	map<char*,SymRec>::iterator it;
+	for (it=symbols.begin(); it!=symbols.end(); ++it){
+		string current(it->first);  //convert char * to string 
 		if(symm==current)
-			return &symbols[sym];
+			return it;
 	}
-	return NULL;
+	return it;
+}
+
+map<char*,SymRec>::iterator Scope::firstSymRec(){
+	return symbols.begin();
+}
+
+bool Scope::checkIteratorAtEnd(map<char*,SymRec>::iterator it){
+	if(it==symbols.end())
+		return true;
+	else
+		return false;
+}
+
+bool Scope::checkIteratorInit(map<char*,SymRec>::iterator it){
+	if(it->second.init)
+		return true;
+	else
+		return false;
 }
 
 void Scope::printAll(){
 	cout<<"start printing symbol table"<<endl;
 	for (map<char*,SymRec>::iterator it=symbols.begin(); it!=symbols.end(); ++it)
-		cout << it->first << " => type: " << it->second.typ << " , var? : " << it->second.VarConst << endl;//" , value : " << (((it->second.value)->node)->val)->v->iVal <<'\n';
+		cout << it->first << " => type: " << it->second.typ << " , var? : " << it->second.VarConst << " , initialized? :"<< it->second.init <<endl;//" , value : " << (((it->second.value)->node)->val)->v->iVal <<'\n';
 }

@@ -51,6 +51,8 @@ struct expr{
 struct SymRec {
 	IdType typ;
 	bool VarConst; // var or constant
+	bool init;		//initialized or not 
+	bool used; 		//used or unused yet
 	//NodeWithType * value;
 };
 
@@ -64,7 +66,10 @@ public:
 	~Scope();
 	//void print(void (*printData)(pair <void * , IdType > *));
 	bool insert(char * sym, SymRec *ptr);
-	SymRec *lookup(char * sym);
+	map<char*,SymRec>::iterator lookup(char * sym);
+	bool checkIteratorAtEnd(map<char*,SymRec>::iterator it);
+	bool checkIteratorInit(map<char*,SymRec>::iterator it);
+	map<char*,SymRec>::iterator firstSymRec();
 	void printAll();
 
 	string scopeName() { return name; };
