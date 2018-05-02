@@ -43,6 +43,9 @@ int line_num = 1;
 "repeat"	{return REPEAT;}
 "until"		{return UNTIL;}
 
+"start_decl:"	{return START_DECL;}
+"end_decl"		{return END_DECL;}
+
 
 
 [ \t]           ;
@@ -90,6 +93,6 @@ b\_[a-zA-Z\_][a-zA-Z0-9\_]*	{
 	yylval.sval = strdup(yytext);
 	return STRING;
 }
-$$.*\n  ; //comment
+$$.*\n  { ++line_num; return ENDL; } //comment
 
 %%

@@ -45,7 +45,14 @@ bool updateSymbolRecord(char *, bool , NodeWithType* ) ;
 void errorExistsBefore(char *);
 void errorDoesntExist(char *);
 void errorUnInitVar();
+void errorConstNotVar(char *);
+void errorVarStmt();
+void errorConstStmt();
 
+void assignmentActions(char * , NodeWithType* ,IdType ); 
+void declAssignmentActions(char * id, NodeWithType* expr,IdType);
+void declIdActions(char *,IdType);
+NodeWithType* newIdActions(char *);
 
 Node * NewNodeFloat(float );
 Node * NewNodeInt(int);
@@ -98,115 +105,45 @@ int cntNodes=0,cntLabels=0;
 %right POW
 %right LOGIC_NOT '~'
 
-%token IF ELSE FOR WHILE SWITCH CASE REPEAT UNTIL DEFAULT DONE ENDL
+%token IF ELSE FOR WHILE SWITCH CASE REPEAT UNTIL DEFAULT DONE ENDL START_DECL END_DECL
 
 %type <nodeval> int_expr float_expr float_int_expr bool_expr compare_opd boolean str_expr bool_term id value for_assignment
 
 %%
 // this is the actual grammar that bison will parse
 
-stmt:
-	stmt variable  | stmt constant_stmt  | stmt assignment  | stmt if_else_if_else_stmt  | stmt for_loop  | stmt while_loop  | stmt repeat_until_loop  | stmt switch_case  |
-	variable | constant_stmt | assignment | if_else_if_else_stmt | for_loop | while_loop  | repeat_until_loop | switch_case ;
+program:
+	START_DECL endls declarations END_DECL endls stmt ;
 
+stmt:
+	stmt assignment  | stmt if_else_if_else_stmt  | stmt for_loop  | stmt while_loop  | stmt repeat_until_loop  | stmt switch_case  |
+	assignment | if_else_if_else_stmt | for_loop | while_loop  | repeat_until_loop | switch_case ;
+
+declarations:
+	variable | constant_stmt | declarations variable | declarations constant_stmt ;	
+	
 variable: 
 	VAR id1 ';' endls |
 	VAR decl_assign endls |
-	VAR error ';' {cout<<"At Line: "<<line_num<<" Not a valid var statement to declare !"<<endl;} endls  //handle syntax error
-	
+	VAR error ';' { errorVarStmt();} endls  //handle syntax error
 	;
 id1:
-	INT_ID { 
-				if( mainScope.checkIteratorAtEnd(mainScope.lookup($1))){  //check if this var hasn't been declared before , not to declare 2 var with the same name 
-					newSymbolRecord($1,integer,true,false);
-					//mainScope.printAll();
-					cout<< "decl for int id (var) -> INT_ID: " <<$1<<endl;
-				}
-				else errorExistsBefore($1);
-			} |
-	FLOAT_ID  {
-				if(mainScope.checkIteratorAtEnd(mainScope.lookup($1))){
-					newSymbolRecord($1,floatt,true,false);
-					//mainScope.printAll();
-					cout<< "decl for float id (var) -> FLOAT_ID: " <<$1<<endl;
-				}
-				else errorExistsBefore($1);
-			  } |
-	STR_ID  { 
-				if(mainScope.checkIteratorAtEnd(mainScope.lookup($1))){
-					newSymbolRecord($1,str,true,false);
-					//mainScope.printAll();
-					cout<< "decl for string id (var) -> STR_ID: " <<$1<<endl;
-				}
-				else errorExistsBefore($1);
-			} |
-	BOOL_ID  { 
-				if(mainScope.checkIteratorAtEnd(mainScope.lookup($1))){
-					newSymbolRecord($1,boolean,true,false);
-					//mainScope.printAll();
-					cout<< "decl for bool id (var) -> BOOL_ID: " <<$1<<endl;
-				}
-				else errorExistsBefore($1);
-			}
+	INT_ID { declIdActions($1,integer);} |
+	FLOAT_ID  {declIdActions($1,floatt);} |
+	STR_ID  { declIdActions($1,str);} |
+	BOOL_ID  { declIdActions($1,boolean);}
 	;
 
-decl_assign:
-	
-	INT_ID EQUAL int_expr ';' { 
-				if(mainScope.checkIteratorAtEnd(mainScope.lookup($1))){ //check if this var hasn't been declared before , not to declare 2 var with the same name 
-					if($3!=NULL){ //check if the variables used in the expression are valid and exist  
-						if(unInit.empty()){
-							newSymbolRecord($1,integer,true,true);
-							generateQuad("STO",$3,NULL,createNewIdNode($1));
-							//mainScope.printAll();
-							cout<< "ass for int id (var) -> INT_ID: " <<$1<<" with value "<<$3<<endl;
-						}
-						else errorUnInitVar();
-					}
-				}
-				else errorExistsBefore($1);	
-			} |
-	FLOAT_ID EQUAL float_int_expr ';' {
-				if(mainScope.checkIteratorAtEnd(mainScope.lookup($1))){
-					if($3!=NULL){
-						newSymbolRecord($1,floatt,true,true);
-						generateQuad("STO",$3,NULL,createNewIdNode($1));
-						//mainScope.printAll();
-						cout<< "ass for float id (var) -> FLOAT_ID: " <<$1<<" with value "<<$3<<endl;
-					}
-				}
-				else errorExistsBefore($1);
-			}|
-	STR_ID EQUAL str_expr ';' { 
-				if(mainScope.checkIteratorAtEnd(mainScope.lookup($1))){
-					if($3!=NULL){
-						newSymbolRecord($1,str,true,true);
-						//mainScope.printAll();
-						cout<< "ass for string id (var) -> STR_ID: " <<$1<<" with value "<<$3<<endl;
-					}
-				}
-				else errorExistsBefore($1);
-			}|
-	BOOL_ID EQUAL bool_expr ';' { 
-				if(mainScope.checkIteratorAtEnd(mainScope.lookup($1))){
-					if($3!=NULL){
-						newSymbolRecord($1,boolean,true,true);
-						generateQuad("STO",$3,NULL,createNewIdNode($1));
-						//mainScope.printAll();
-						cout<< "ass for bool id (var) -> BOOL_ID: " <<$1<<endl;
-					}
-				}
-				else errorExistsBefore($1);
-			}//|
-	//idds EQUAL error '\n' {cout <<"Type of identifier doesn't match expression type!"<<endl;}|				
-			
+decl_assign:	
+	INT_ID EQUAL int_expr ';' { declAssignmentActions($1,$3,integer); } |
+	FLOAT_ID EQUAL float_int_expr ';' {declAssignmentActions($1,$3,floatt);}|
+	STR_ID EQUAL str_expr ';' { declAssignmentActions($1,$3,str);}|
+	BOOL_ID EQUAL bool_expr ';' { declAssignmentActions($1,$3,boolean);}
 	;
-/*idds:
-	INT_ID | FLOAT_ID | STR_ID | BOOL_ID ;
-*/	
+	
 constant_stmt:
 	CONST constant endls |
-	CONST error ';' {cout<<"At Line: "<<line_num<<"Not a valid const statement to declare !"<<endl;} endls //handle syntax error;
+	CONST error ';' {errorConstStmt();} endls //handle syntax error;
 	
 constant:
 	INT_ID EQUAL INT ';' { 
@@ -214,8 +151,6 @@ constant:
 							NodeWithType* nt=createNewValueNode(NewNodeInt($3));
 							newSymbolRecord($1,integer,false,true);
 							generateQuad("STO",nt,NULL,createNewIdNode($1));
-							//mainScope.printAll();
-							cout<< "ass for int id (const) -> INT_ID: " <<$1<<endl;
 						}
 						else errorExistsBefore($1);	
 					} |
@@ -224,8 +159,6 @@ constant:
 							NodeWithType* nt=createNewValueNode(NewNodeFloat($3));
 							newSymbolRecord($1,floatt,false,true);
 							generateQuad("STO",nt,NULL,createNewIdNode($1));
-							//mainScope.printAll();
-							cout<< "ass for float id (const) -> FLOAT_ID: " <<$1<<endl;
 						}
 						else errorExistsBefore($1);	
 					}|
@@ -234,8 +167,6 @@ constant:
 							NodeWithType* nt=createNewValueNode(NewNodeString($3));
 							newSymbolRecord($1,str,false,true);
 							generateQuad("STO",nt,NULL,createNewIdNode($1));
-							//mainScope.printAll();
-							cout<< "ass for str id (const) -> STR_ID: " <<$1<<endl;
 						}
 						else errorExistsBefore($1);
 					}|
@@ -244,72 +175,22 @@ constant:
 							NodeWithType* nt=createNewValueNode(NewNodeBool($3));
 							newSymbolRecord($1,boolean,false,true);
 							generateQuad("STO",nt,NULL,createNewIdNode($1));
-							//mainScope.printAll();
-							cout<< "ass for bool id (const) -> BOOL_ID: " <<$1<<endl;
 						}
 						else errorExistsBefore($1);
 					}
 	;
 	
 assignment:
-	INT_ID EQUAL int_expr ';' endls { 
-				if(!mainScope.checkIteratorAtEnd(mainScope.lookup($1))){  //check if the var has been declared before, to use it 
-					if($3!=NULL){ 				//check if the variables used in the expression are valid and exist
-						if(unInit.empty()){
-							updateSymbolRecordInit($1);
-							generateQuad("STO",$3,NULL,createNewIdNode($1));
-							cout<< "ass for int id (var) -> INT_ID: " <<$1<<endl;
-						}
-						else errorUnInitVar();
-					}
-				}
-				else errorDoesntExist($1);
-			} |
-	FLOAT_ID EQUAL float_int_expr ';' endls { 
-				if(!mainScope.checkIteratorAtEnd(mainScope.lookup($1))){
-					if($3!=NULL){
-						if(unInit.empty()){
-							updateSymbolRecordInit($1);
-							generateQuad("STO",$3,NULL,createNewIdNode($1));
-							cout<< "ass for float id (var) -> FLOAT_ID: " <<$1<<endl;
-						}
-						else errorUnInitVar();
-					}
-				}
-				else errorDoesntExist($1);		
-			}|
-	STR_ID EQUAL str_expr ';' endls { 
-				if(!mainScope.checkIteratorAtEnd(mainScope.lookup($1))){
-					if($3!=NULL){
-						if(unInit.empty()){
-							updateSymbolRecordInit($1);
-							cout<< "ass for string id (var) -> STR_ID: " <<$1<<endl;
-						}
-						else errorUnInitVar();
-					}
-				}
-				else errorDoesntExist($1);		
-			}|
-	BOOL_ID EQUAL bool_expr ';' endls { 
-				if(!mainScope.checkIteratorAtEnd(mainScope.lookup($1))){
-					if($3!=NULL){
-						if(unInit.empty()){
-							updateSymbolRecordInit($1);
-							generateQuad("STO",boolRes.top(),NULL,createNewIdNode($1));
-							boolRes.pop();
-							cout<< "ass for bool id (var) -> BOOL_ID: " <<$1<<endl;
-						}
-						else errorUnInitVar();
-					}
-				}
-				else errorDoesntExist($1);		
-			} |
+	INT_ID EQUAL int_expr ';' { assignmentActions($1,$3,integer);} endls |
+	FLOAT_ID EQUAL float_int_expr ';' { assignmentActions ($1,$3,floatt);} endls |
+	STR_ID EQUAL str_expr ';' endls { assignmentActions($1,$3,str);}|
+	BOOL_ID EQUAL bool_expr ';' endls { assignmentActions($1,$3,boolean);} |
 	//handle errors 
-	INT_ID EQUAL error ';' {cout<<"At Line: "<<line_num<<"Not a valid int expression to use !" <<endl;} endls |
-	FLOAT_ID EQUAL error ';' {cout<<"At Line: "<<line_num<<"Not a valid float expression to use !" <<endl;} endls |
-	STR_ID EQUAL error ';' {cout<<"At Line: "<<line_num<<"Not a valid string expression to use !" <<endl;} endls |
-	BOOL_ID EQUAL error ';' {cout<<"At Line: "<<line_num<<"Not a valid bool expression to use !"<<endl;} endls |
-	error EQUAL exprr ';' {cout<<"At Line: "<<line_num<<"Not a valid identifier to use !" <<endl;} endls //|
+	INT_ID EQUAL error ';' {cout<<"At Line: "<<line_num<<" Not a valid int expression to use !" <<endl;} endls |
+	FLOAT_ID EQUAL error ';' {cout<<"At Line: "<<line_num<<" Not a valid float expression to use !" <<endl;} endls |
+	STR_ID EQUAL error ';' {cout<<"At Line: "<<line_num<<" Not a valid string expression to use !" <<endl;} endls |
+	BOOL_ID EQUAL error ';' {cout<<"At Line: "<<line_num<<" Not a valid bool expression to use !"<<endl;} endls |
+	error EQUAL exprr ';' {cout<<"At Line: "<<line_num<<" Not a valid identifier to use !" <<endl;} endls //|
 	//error EQUAL error ';' {cout<<"Not a valid assignment expression to use !" <<endl;}
 	;
 exprr :
@@ -331,48 +212,34 @@ int_expr:
 	
 	'(' int_expr ')' { $$=$2;	cout << "Brackets  " <<endl; } | 
 	INT { $$=createNewValueNode(NewNodeInt($1)); } |
-	INT_ID { 
-		map<char*,SymRec>::iterator it=mainScope.lookup($1);
-		if(!mainScope.checkIteratorAtEnd(it)){
-			$$=createNewIdNode($1); 
-			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
-			updateSymbolRecordUsed($1);
-			} 
-		else {$$=NULL; errorDoesntExist($1);} }
+	INT_ID { $$=newIdActions($1);}
 	;
 
 float_expr:
-	float_expr '+' float_expr { $$=createNewExprNode(pls,2,$1,$3); if($$!=NULL){generateQuad("ADD",$1,$3,$$); cout << "PLUS: " << $$ <<endl; }} |
-	float_expr '-' float_expr { $$=createNewExprNode(mins,2,$1,$3); if($$!=NULL){generateQuad("SUB",$1,$3,$$); cout << "MINUS: " << $$ <<endl; }}| 
-	float_expr '*' float_expr { $$=createNewExprNode(mul,2,$1,$3); if($$!=NULL){generateQuad("MUL",$1,$3,$$); cout << "MUL: " << $$ << endl; } }| 
-	float_expr '/' float_expr { $$=createNewExprNode(dv,2,$1,$3); if($$!=NULL){generateQuad("DIV",$1,$3,$$); cout << "DIV: " << $$ <<endl; }}| 
-	float_expr '%' float_expr { $$=createNewExprNode(md,2,$1,$3);  if($$!=NULL){generateQuad("MOD",$1,$3,$$);cout << "MOD: " << $$ << endl; }}| 
-	float_expr POW float_expr { $$=createNewExprNode(pw,2,$1,$3);  if($$!=NULL){generateQuad("POW",$1,$3,$$);cout << "POW: " << $$ << endl; }}| 
+	float_expr '+' float_expr { $$=createNewExprNode(pls,2,$1,$3); if($$!=NULL){generateQuad("ADD",$1,$3,$$); cout << "PLUS " <<endl; }} |
+	float_expr '-' float_expr { $$=createNewExprNode(mins,2,$1,$3); if($$!=NULL){generateQuad("SUB",$1,$3,$$); cout << "MINUS " << endl; }}| 
+	float_expr '*' float_expr { $$=createNewExprNode(mul,2,$1,$3); if($$!=NULL){generateQuad("MUL",$1,$3,$$); cout << "MUL " << endl; } }| 
+	float_expr '/' float_expr { $$=createNewExprNode(dv,2,$1,$3); if($$!=NULL){generateQuad("DIV",$1,$3,$$); cout << "DIV " << endl; }}| 
+	float_expr '%' float_expr { $$=createNewExprNode(md,2,$1,$3);  if($$!=NULL){generateQuad("MOD",$1,$3,$$);cout << "MOD " << endl; }}| 
+	float_expr POW float_expr { $$=createNewExprNode(pw,2,$1,$3);  if($$!=NULL){generateQuad("POW",$1,$3,$$);cout << "POW " << endl; }}| 
 	
-	float_expr '+' int_expr { $$=createNewExprNode(pls,2,$1,$3); if($$!=NULL){generateQuad("ADD",$1,$3,$$); cout << "PLUS: " << $$ <<endl; }} |
-	float_expr '-' int_expr { $$=createNewExprNode(mins,2,$1,$3); if($$!=NULL){generateQuad("SUB",$1,$3,$$); cout << "MINUS: " << $$ <<endl; }}| 
-	float_expr '*' int_expr { $$=createNewExprNode(mul,2,$1,$3); if($$!=NULL){generateQuad("MUL",$1,$3,$$); cout << "MUL: " << $$ << endl; } }| 
-	float_expr '/' int_expr { $$=createNewExprNode(dv,2,$1,$3); if($$!=NULL){generateQuad("DIV",$1,$3,$$); cout << "DIV: " << $$ <<endl; }}| 
-	float_expr '%' int_expr { $$=createNewExprNode(md,2,$1,$3);  if($$!=NULL){generateQuad("MOD",$1,$3,$$);cout << "MOD: " << $$ << endl; }}| 
-	float_expr POW int_expr { $$=createNewExprNode(pw,2,$1,$3);  if($$!=NULL){generateQuad("POW",$1,$3,$$);cout << "POW: " << $$ << endl; }}| 
+	float_expr '+' int_expr { $$=createNewExprNode(pls,2,$1,$3); if($$!=NULL){generateQuad("ADD",$1,$3,$$); cout << "PLUS " << endl; }} |
+	float_expr '-' int_expr { $$=createNewExprNode(mins,2,$1,$3); if($$!=NULL){generateQuad("SUB",$1,$3,$$); cout << "MINUS " <<endl; }}| 
+	float_expr '*' int_expr { $$=createNewExprNode(mul,2,$1,$3); if($$!=NULL){generateQuad("MUL",$1,$3,$$); cout << "MUL " << endl; } }| 
+	float_expr '/' int_expr { $$=createNewExprNode(dv,2,$1,$3); if($$!=NULL){generateQuad("DIV",$1,$3,$$); cout << "DIV " <<endl; }}| 
+	float_expr '%' int_expr { $$=createNewExprNode(md,2,$1,$3);  if($$!=NULL){generateQuad("MOD",$1,$3,$$);cout << "MOD " << endl; }}| 
+	float_expr POW int_expr { $$=createNewExprNode(pw,2,$1,$3);  if($$!=NULL){generateQuad("POW",$1,$3,$$);cout << "POW " << endl; }}| 
 	
-	int_expr '+' float_expr { $$=createNewExprNode(pls,2,$1,$3); if($$!=NULL){generateQuad("ADD",$1,$3,$$); cout << "PLUS: " << $$ <<endl; }} |
-	int_expr '-' float_expr { $$=createNewExprNode(mins,2,$1,$3); if($$!=NULL){generateQuad("SUB",$1,$3,$$); cout << "MINUS: " << $$ <<endl; }}| 
-	int_expr '*' float_expr { $$=createNewExprNode(mul,2,$1,$3); if($$!=NULL){generateQuad("MUL",$1,$3,$$); cout << "MUL: " << $$ << endl;  }}| 
-	int_expr '/' float_expr { $$=createNewExprNode(dv,2,$1,$3); if($$!=NULL){generateQuad("DIV",$1,$3,$$); cout << "DIV: " << $$ <<endl; }}| 
-	int_expr '%' float_expr { $$=createNewExprNode(md,2,$1,$3);  if($$!=NULL){generateQuad("MOD",$1,$3,$$);cout << "MOD: " << $$ << endl; }}| 
-	int_expr POW float_expr { $$=createNewExprNode(pw,2,$1,$3);  if($$!=NULL){generateQuad("POW",$1,$3,$$);cout << "POW: " << $$ << endl; }}| 
+	int_expr '+' float_expr { $$=createNewExprNode(pls,2,$1,$3); if($$!=NULL){generateQuad("ADD",$1,$3,$$); cout << "PLUS" << endl; }} |
+	int_expr '-' float_expr { $$=createNewExprNode(mins,2,$1,$3); if($$!=NULL){generateQuad("SUB",$1,$3,$$); cout << "MINUS " << endl; }}| 
+	int_expr '*' float_expr { $$=createNewExprNode(mul,2,$1,$3); if($$!=NULL){generateQuad("MUL",$1,$3,$$); cout << "MUL " << endl;  }}| 
+	int_expr '/' float_expr { $$=createNewExprNode(dv,2,$1,$3); if($$!=NULL){generateQuad("DIV",$1,$3,$$); cout << "DIV " << endl; }}| 
+	int_expr '%' float_expr { $$=createNewExprNode(md,2,$1,$3);  if($$!=NULL){generateQuad("MOD",$1,$3,$$);cout << "MOD " << endl; }}| 
+	int_expr POW float_expr { $$=createNewExprNode(pw,2,$1,$3);  if($$!=NULL){generateQuad("POW",$1,$3,$$);cout << "POW " << endl; }}| 
 	
 	'(' float_expr ')' { $$=$2; cout << "Brackets  " <<endl; } |
 	FLOAT { $$=createNewValueNode(NewNodeFloat($1));  }  | 
-	FLOAT_ID  { 
-		map<char*,SymRec>::iterator it=mainScope.lookup($1);
-		if(!mainScope.checkIteratorAtEnd(it)){
-			$$=createNewIdNode($1);
-			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
-			updateSymbolRecordUsed($1);
-			} 
-		else {$$=NULL; errorDoesntExist($1);}  }
+	FLOAT_ID  { $$=newIdActions($1);}
 	;
 	
 float_int_expr:
@@ -380,14 +247,7 @@ float_int_expr:
 	
 str_expr:
 	STRING { $$=createNewValueNode(NewNodeString($1));  }  |  
-	STR_ID { 
-		map<char*,SymRec>::iterator it=mainScope.lookup($1);
-		if(!mainScope.checkIteratorAtEnd(it)){
-			$$=createNewIdNode($1);
-			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
-			updateSymbolRecordUsed($1);
-			} 
-		else {$$=NULL; errorDoesntExist($1);}  }
+	STR_ID { $$=newIdActions($1); }
 	;
 
 if_else_if_else_stmt:
@@ -673,6 +533,57 @@ endls:
 ofstream quad;
 int lineNo=0;
 
+NodeWithType* newIdActions(char * id){
+	NodeWithType* newNode;
+	
+	map<char*,SymRec>::iterator it=mainScope.lookup(id);
+	if(!mainScope.checkIteratorAtEnd(it)){
+		newNode=createNewIdNode(id); 
+		if(!mainScope.checkIteratorInit(it)) unInit.push(id);
+		updateSymbolRecordUsed(id);
+	} 
+	else {newNode=NULL; errorDoesntExist(id);}
+	return newNode;
+}
+
+void declIdActions(char * id,IdType typ){
+	if( mainScope.checkIteratorAtEnd(mainScope.lookup(id))){  //check if this var hasn't been declared before , not to declare 2 var with the same name 
+		newSymbolRecord(id,typ,true,false);
+	}
+	else errorExistsBefore(id);
+}
+
+void declAssignmentActions(char * id, NodeWithType* expr,IdType typ){
+	if(mainScope.checkIteratorAtEnd(mainScope.lookup(id)) ){ //check if this var hasn't been declared before , not to declare 2 var with the same name 
+		if(expr!=NULL){ //check if the variables used in the expression are valid and exist  
+			if(unInit.empty()){  //check if there is uninitialized variables used
+				newSymbolRecord(id,typ,true,true);
+				if(typ!=str)generateQuad("STO",expr,NULL,createNewIdNode(id));	
+			}
+			else errorUnInitVar();
+		}
+	}
+	else errorExistsBefore(id);	
+}
+
+void assignmentActions(char * id, NodeWithType* expr, IdType typ ){
+	map<char*,SymRec>::iterator it=mainScope.lookup(id);
+	if(!mainScope.checkIteratorAtEnd(it) ){  //check if the var has been declared before, to use it 
+		if(mainScope.checkVarConst(it)){   //check if it is var or const
+			if(expr!=NULL){ 				//check if the variables used in the expression are valid and exist
+				if(unInit.empty()){
+					updateSymbolRecordInit(id);
+					if(typ!=str) generateQuad("STO",expr,NULL,createNewIdNode(id));
+					if(typ==boolean) boolRes.pop();
+				}
+				else errorUnInitVar();
+			}
+		}
+		else errorConstNotVar(id);
+	}
+	else errorDoesntExist(id);
+}
+
 void outValue(ValueWithType * vt){
 	if(vt->tp==integer) quad << vt->v->iVal << ", " ;
 	else if (vt->tp==floatt) quad << vt->v->fVal << ", " ;
@@ -746,18 +657,30 @@ void updateSymbolRecordUsed(char * name){
 }
 
 void errorExistsBefore(char * name){
-	cout<<"There exists a variable with the same name! '"<< name <<"'"<<endl;
+	cout<<"At line: "<<line_num<<" There exists a variable with the same name! '"<< name <<"'"<<endl;
 }
 
 void errorDoesntExist(char * name){
-	cout<<"This variable has not been declared ! '"<< name <<"'"<<endl;
+	cout<<"At line: "<<line_num<<" This variable has not been declared ! '"<< name <<"'"<<endl;
+}
+
+void errorConstNotVar(char * name){
+	cout<<"At line: "<<line_num<<" Constant can not be assigned a new value ! '"<< name <<"'"<<endl;
 }
 
 void errorUnInitVar(){
 	while(!unInit.empty()){
-		cout<<"This variable is used before it's initialized '"<< unInit.front() <<"'"<<endl;
+		cout<<"At line: "<<line_num<<" This variable is used before it's initialized '"<< unInit.front() <<"'"<<endl;
 		unInit.pop();
 	}
+}
+
+void errorVarStmt(){
+	cout<<"At Line: "<<line_num<<" Not a valid var statement to declare !"<<endl;
+}
+
+void errorConstStmt(){
+	cout<<"At Line: "<<line_num<<" Not a valid const statement to declare !"<<endl;	
 }
 
 void printUnUsedVar(){
@@ -770,28 +693,6 @@ void printUnUsedVar(){
 	}
 }
 
-/*bool updateSymbolRecord(char * name, bool v_c , NodeWithType* vlu  ) {
-	//check if it's var not const
-	if(v_c){
-		//check if it exists
-		SymRec * oldRec=mainScope.lookup(name);
-		if(oldRec!=NULL){ //update
-			//oldRec->typ=ty;
-			//oldRec->VarConst=v_c;
-			oldRec->value=vlu;
-			//mainScope.insert(name,&rec);
-			return true;
-		}
-		else {//handle error -> this variable doesn't exist 
-			cout<<"variable doesn't exist" <<endl;
-			return false;
-		}
-	}
-	else {//handle error -> this is not a variable  
-		cout<<"Constant can't be modified" <<endl;
-		return false;
-	}
-}*/
 
 Node * NewNodeInt(int i){  //create new node and new value and assign this value to a new ValueWithType then assign this ValueWithType to the node  
 	Node * nd=new Node();

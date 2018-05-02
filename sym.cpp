@@ -68,6 +68,13 @@ bool Scope::checkIteratorInit(map<char*,SymRec>::iterator it){
 		return false;
 }
 
+bool Scope::checkVarConst(map<char*,SymRec>::iterator it){
+	if(it->second.VarConst)
+		return true;
+	else
+		return false;
+}
+
 void Scope::printAll(){
 	cout<<"start printing symbol table"<<endl;
 	for (map<char*,SymRec>::iterator it=symbols.begin(); it!=symbols.end(); ++it)

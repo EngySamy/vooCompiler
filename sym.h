@@ -69,6 +69,7 @@ public:
 	map<char*,SymRec>::iterator lookup(char * sym);
 	bool checkIteratorAtEnd(map<char*,SymRec>::iterator it);
 	bool checkIteratorInit(map<char*,SymRec>::iterator it);
+	bool checkVarConst(map<char*,SymRec>::iterator it);
 	map<char*,SymRec>::iterator firstSymRec();
 	void printAll();
 

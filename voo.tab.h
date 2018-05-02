@@ -73,7 +73,9 @@
      UNTIL = 289,
      DEFAULT = 290,
      DONE = 291,
-     ENDL = 292
+     ENDL = 292,
+     START_DECL = 293,
+     END_DECL = 294
    };
 #endif
 
@@ -84,7 +86,7 @@ typedef union YYSTYPE
 {
 
 /* Line 1676 of yacc.c  */
-#line 67 "voo.y"
+#line 74 "voo.y"
 
 	int ival;
 	float fval;
@@ -96,7 +98,7 @@ typedef union YYSTYPE
 
 
 /* Line 1676 of yacc.c  */
-#line 100 "voo.tab.h"
+#line 102 "voo.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
