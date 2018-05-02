@@ -27,7 +27,7 @@ map<NodeWithType* , int > nodes;  //after creating id node or expr node we inser
 stack<int> brLabels;
 stack<int> ifElseLabels;
 stack<int> switchLabels;
-stack<NodeWithType*> switchIds;
+stack<NodeWithType*> switchIds;  //id of switch case 
 stack<NodeWithType*> boolRes;
 queue<char *> unInit;
 
@@ -48,11 +48,17 @@ void errorUnInitVar();
 void errorConstNotVar(char *);
 void errorVarStmt();
 void errorConstStmt();
+void errorTypeMismatch();
+void errorOperandsTypeMismatch();
 
 void assignmentActions(char * , NodeWithType* ,IdType ); 
 void declAssignmentActions(char * id, NodeWithType* expr,IdType);
 void declIdActions(char *,IdType);
 NodeWithType* newIdActions(char *);
+
+IdType getIdTypeForId(NodeWithType* );
+IdType getIdTypeForUnknownNode(NodeWithType* );
+bool compareTwoOperandsTypes(NodeWithType* , NodeWithType* );
 
 Node * NewNodeFloat(float );
 Node * NewNodeInt(int);
@@ -104,10 +110,11 @@ int cntNodes=0,cntLabels=0;
  
 %right POW
 %right LOGIC_NOT '~'
+%nonassoc UMINUS
 
 %token IF ELSE FOR WHILE SWITCH CASE REPEAT UNTIL DEFAULT DONE ENDL START_DECL END_DECL
 
-%type <nodeval> int_expr float_expr float_int_expr bool_expr compare_opd boolean str_expr bool_term id value for_assignment
+%type <nodeval> int_expr float_expr float_int_expr bool_expr compare_opd boolean str_expr bool_term id  for_assignment value
 
 %%
 // this is the actual grammar that bison will parse
@@ -185,18 +192,19 @@ assignment:
 	FLOAT_ID EQUAL float_int_expr ';' { assignmentActions ($1,$3,floatt);} endls |
 	STR_ID EQUAL str_expr ';' endls { assignmentActions($1,$3,str);}|
 	BOOL_ID EQUAL bool_expr ';' endls { assignmentActions($1,$3,boolean);} |
-	//handle errors 
+	//handle errors (semantic)  
 	INT_ID EQUAL error ';' {cout<<"At Line: "<<line_num<<" Not a valid int expression to use !" <<endl;} endls |
 	FLOAT_ID EQUAL error ';' {cout<<"At Line: "<<line_num<<" Not a valid float expression to use !" <<endl;} endls |
 	STR_ID EQUAL error ';' {cout<<"At Line: "<<line_num<<" Not a valid string expression to use !" <<endl;} endls |
-	BOOL_ID EQUAL error ';' {cout<<"At Line: "<<line_num<<" Not a valid bool expression to use !"<<endl;} endls |
-	error EQUAL exprr ';' {cout<<"At Line: "<<line_num<<" Not a valid identifier to use !" <<endl;} endls //|
+	BOOL_ID EQUAL error ';' {cout<<"At Line: "<<line_num<<" Not a valid bool expression to use !"<<endl;} endls //|
+	//error EQUAL exprr ';' {cout<<"At Line: "<<line_num<<" Not a valid identifier to use !" <<endl;} endls //|
 	//error EQUAL error ';' {cout<<"Not a valid assignment expression to use !" <<endl;}
 	;
-exprr :
+/*exprr :
 	str_expr | bool_expr | int_expr | float_expr ;
-
+*/
 int_expr:
+	'-' int_expr %prec UMINUS { $$=createNewExprNode(neg,1,$2,NULL); if($$!=NULL){generateQuad("NEG",$2,NULL,$$); cout << "NEG " <<endl; }}|
 	int_expr '+' int_expr { $$=createNewExprNode(pls,2,$1,$3); if($$!=NULL){generateQuad("ADD",$1,$3,$$); cout << "PLUS "  <<endl;} } | 
 	int_expr '-' int_expr { $$=createNewExprNode(mins,2,$1,$3); if($$!=NULL){generateQuad("SUB",$1,$3,$$); cout << "MINUS" <<endl; }}| 
 	int_expr '*' int_expr { $$=createNewExprNode(mul,2,$1,$3); if($$!=NULL){generateQuad("MUL",$1,$3,$$); cout << "MUL" <<endl; } }| 
@@ -287,7 +295,7 @@ else_if_stmt:
 	;
 	
 while_loop:
-	WHILE start_while_if bool_expr end_while_if '{' endls stmt '}' ';' endls {
+	WHILE start_while_if bool_expr end_while_if '{' endls stmt '}' endls {
 		int temp =brLabels.top();
 		brLabels.pop();
 		if($3!=NULL){
@@ -295,10 +303,13 @@ while_loop:
 			outLabel(temp);
 		}
 		brLabels.pop();	
-	}|
+	}
 	//handle error 
-	//WHILE '(' error ')' '{' stmt '}' {cout<<"Not a valid boolean expression in while statement !"<<endl;}|
-	WHILE error ';' { cout<<"At Line: "<<line_num<<" Not a valid while statement !"<<endl;} endls // char* cc="Not a valid while statement ! from yyerror"; yyerror(cc);
+	| WHILE error '}' { cout<<"At Line: "<<line_num<<" expected '(' after 'while' !"<<endl;} endls 
+	//| WHILE start_while_if error '}' { cout<<"At Line: "<<line_num<<" error in boolean expression of while statement !"<<endl; if(!boolRes.empty()) boolRes.pop();} endls 
+	| WHILE start_while_if bool_expr error '}' { cout<<"At Line: "<<line_num<<" expected ')' after boolean expression of while statement !"<<endl;if(!boolRes.empty()) boolRes.pop();} endls 
+	| WHILE start_while_if bool_expr end_while_if error '}' { cout<<"At Line: "<<line_num<<" expected '{' after (boolean expression) of while statement !"<<endl;if(!boolRes.empty()) boolRes.pop();} endls 
+	| WHILE start_while_if bool_expr end_while_if '{' endls error '}' { cout<<"At Line: "<<line_num<<" error in statements of while statement !"<<endl;if(!boolRes.empty()) boolRes.pop();} endls 
 	;
 	
 start_while_if:
@@ -316,9 +327,17 @@ for_loop:
 			outLabel(temp);
 		}
 		brLabels.pop();
-	} |
-	FOR error { cout<<"At Line: "<<line_num<<" Not a valid for statement !"<<endl;} ';' endls
-	;
+	} 
+	//handle different cases for syntax eror
+	| FOR error ')' ';'{ cout<<"At Line: "<<line_num<<" for loop: expected '(' after 'for' !"<<endl;} endls
+	| FOR '(' error ')' ';'{ cout<<"At Line: "<<line_num<<" for loop: error in the for iteration assignment statement or boolean expression !"<<endl;}  endls
+	| FOR '(' for_assignment ',' start_bool_expr bool_expr end_bool_expr error ')' ';'{ cout<<"At Line: "<<line_num<<" for loop: expected ')' after the boolean expression !"<<endl;}  endls
+	| FOR '(' for_assignment ',' start_bool_expr bool_expr end_bool_expr ')' error ')' ';'{ cout<<"At Line: "<<line_num<<" for loop: expected '{' after boolean expression !"<<endl;}  endls
+	| FOR '(' for_assignment ',' start_bool_expr bool_expr end_bool_expr ')' '{' endls error ')' ';'{ cout<<"At Line: "<<line_num<<" for loop: error in the statements of the for loop !"<<endl;}  endls
+	| FOR '(' for_assignment ',' start_bool_expr bool_expr end_bool_expr ')' '{' endls stmt error ')' ';'{ cout<<"At Line: "<<line_num<<" for loop: expected '}' after the last statement in the for loop !"<<endl;}  endls
+	| FOR '(' for_assignment ',' start_bool_expr bool_expr end_bool_expr ')' '{' endls stmt '}' error ')' ';'{ cout<<"At Line: "<<line_num<<" for loop: expected '(' after '}' !"<<endl;}  endls
+	| FOR '(' for_assignment ',' start_bool_expr bool_expr end_bool_expr ')' '{' endls stmt '}' '(' error ')' ';'{ cout<<"At Line: "<<line_num<<" for loop: error in for iteration assignment statement !"<<endl;}  endls
+;
 	
 start_bool_expr:
 	//epsilon 
@@ -329,19 +348,8 @@ end_bool_expr:
 	{ if(!boolRes.empty()){generateBranchQuad("JFALSE",brLabels.top(),boolRes.top()); boolRes.pop();} }  ;
 	
 for_assignment:
-	INT_ID EQUAL int_expr {
-		map<char*,SymRec>::iterator it=mainScope.lookup($1);
-		if(!mainScope.checkIteratorAtEnd(it)){
-			$$=createNewIdNode($1); 
-			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
-			updateSymbolRecordUsed($1);
-			} 
-		else {$$=NULL; errorDoesntExist($1);}
-			 
-	} ;
+	INT_ID EQUAL int_expr {assignmentActions($1,$3,integer);} ;
 	
-
-			
 repeat_until_loop:
 	start_repeat '{' endls stmt '}' UNTIL '(' bool_expr ')' ';' endls {
 		if(!boolRes.empty()){
@@ -349,9 +357,14 @@ repeat_until_loop:
 			boolRes.pop();
 		}
 		brLabels.pop();
-	} |
+	} 
 	//handle syntax error
-	REPEAT error ';' { cout<<"At Line: "<<line_num<<" Not a valid repeat until statement !"<<endl;} endls
+	| start_repeat error ')' ';' { cout<<"At Line: "<<line_num<<" expected '{' after repeat !"<<endl;brLabels.pop();} endls
+	| start_repeat '{' endls error ')' ';' { cout<<"At Line: "<<line_num<<" error in statements of repeat-until statement !"<<endl;brLabels.pop();} endls
+	| start_repeat '{' endls stmt '}' error ')' ';' { cout<<"At Line: "<<line_num<<" expected 'UNTIL' after '}' repeat-until statement !"<<endl;brLabels.pop();} endls
+	| start_repeat '{' endls stmt '}' UNTIL error ')' ';' { cout<<"At Line: "<<line_num<<" expected '(' after 'UNTIL' repeat-until statement !"<<endl;brLabels.pop();} endls
+	| start_repeat '{' endls stmt '}' UNTIL '(' error ')' ';' { cout<<"At Line: "<<line_num<<" error in boolean expression of repeat-until statement !"<<endl;brLabels.pop();} endls
+	
 	;
 	
 
@@ -359,170 +372,106 @@ start_repeat:
 	REPEAT {int label=generateOneLabel(); outLabel(label); brLabels.push(label);} ;
 
 bool_expr:
-	LOGIC_NOT bool_expr { cout << "LOGIC_NOT " <<endl; } |
-	bool_expr LOGIC_AND bool_expr { 
-						$$=createNewExprNode(l_and,2,$1,$3);
-						if($$!=NULL){
-							generateQuad("AND",$1,$3,$$);
-							boolRes.push($$); 						
-							cout << "LOGIC_AND " <<endl;
-						}
-					} | 
-	bool_expr LOGIC_OR bool_expr { 
-					$$=createNewExprNode(l_and,2,$1,$3);
-						if($$!=NULL){
-							generateQuad("OR",$1,$3,$$);
-							boolRes.push($$); 						
-							cout << "LOGIC_OR " <<endl;
-						}
-					} |
-	boolean { cout << "boolean " <<endl; } |
-	BOOL_ID { 
-		map<char*,SymRec>::iterator it=mainScope.lookup($1);
-		if(!mainScope.checkIteratorAtEnd(it)){
-			$$=createNewIdNode($1); 
-			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
-			updateSymbolRecordUsed($1);
-		} 
-		else {$$=NULL; errorDoesntExist($1);}  } |
-	
-	bool_term { $$=$1;   if($$!=NULL) boolRes.push($$); 	}|
+	LOGIC_NOT bool_expr {$$=createNewExprNode(l_not,1,$2,NULL); if($$!=NULL){generateQuad("LOG_NOT",$2,NULL,$$); boolRes.push($$); } } |
+	bool_expr LOGIC_AND bool_expr { $$=createNewExprNode(l_and,2,$1,$3); if($$!=NULL){generateQuad("LOG_AND",$1,$3,$$); boolRes.push($$); } } | 
+	bool_expr LOGIC_OR bool_expr { $$=createNewExprNode(l_or,2,$1,$3);if($$!=NULL){generateQuad("LOG_OR",$1,$3,$$); boolRes.push($$);} } |
+	boolean { $$=$1; boolRes.push($$); } |
+	BOOL_ID { $$=newIdActions($1); boolRes.push($$); } |
+	bool_term { $$=$1;   if($$!=NULL) boolRes.push($$); }|
 	'(' bool_expr ')' { $$=$2;  cout << "Brackets " <<endl; }
 	;
-
-	
 	
 bool_term:
-	compare_opd EQ compare_opd { $$=createNewExprNode(eq,2,$1,$3); if($$!=NULL){generateQuad("EQ",$1,$3,$$); cout << "EQ " <<endl; }} | 
-	compare_opd NOT_EQ compare_opd { $$=createNewExprNode(ne,2,$1,$3); if($$!=NULL){generateQuad("NOT_EQ",$1,$3,$$); cout << "NOT_EQ " <<endl; }} | 
-	compare_opd GR compare_opd { $$=createNewExprNode(gt,2,$1,$3); if($$!=NULL){generateQuad("GR",$1,$3,$$); cout << "GR " <<endl; }} | 
-	compare_opd GR_EQ compare_opd { $$=createNewExprNode(gte,2,$1,$3); if($$!=NULL){generateQuad("GR_EQ",$1,$3,$$); cout << "GR_EQ " <<endl; }} | 
-	compare_opd SM compare_opd { $$=createNewExprNode(sm,2,$1,$3); if($$!=NULL){generateQuad("SM",$1,$3,$$); cout << "SM " <<endl; }} | 
-	compare_opd SM_EQ compare_opd { $$=createNewExprNode(sme,2,$1,$3); if($$!=NULL){generateQuad("SM_EQ",$1,$3,$$); cout << "SM_EQ " <<endl; }} 
+	compare_opd EQ compare_opd { if(!compareTwoOperandsTypes($1,$3))errorOperandsTypeMismatch(); $$=createNewExprNode(eq,2,$1,$3); if($$!=NULL){generateQuad("EQ",$1,$3,$$); cout << "EQ " <<endl; }} | 
+	compare_opd NOT_EQ compare_opd { if(!compareTwoOperandsTypes($1,$3))errorOperandsTypeMismatch(); $$=createNewExprNode(ne,2,$1,$3); if($$!=NULL){generateQuad("NOT_EQ",$1,$3,$$); cout << "NOT_EQ " <<endl; }} | 
+	compare_opd GR compare_opd { if(!compareTwoOperandsTypes($1,$3))errorOperandsTypeMismatch(); $$=createNewExprNode(gt,2,$1,$3); if($$!=NULL){generateQuad("GR",$1,$3,$$); cout << "GR " <<endl; }} | 
+	compare_opd GR_EQ compare_opd { if(!compareTwoOperandsTypes($1,$3))errorOperandsTypeMismatch(); $$=createNewExprNode(gte,2,$1,$3); if($$!=NULL){generateQuad("GR_EQ",$1,$3,$$); cout << "GR_EQ " <<endl; }} | 
+	compare_opd SM compare_opd { if(!compareTwoOperandsTypes($1,$3))errorOperandsTypeMismatch(); $$=createNewExprNode(sm,2,$1,$3); if($$!=NULL){generateQuad("SM",$1,$3,$$); cout << "SM " <<endl; }} | 
+	compare_opd SM_EQ compare_opd { if(!compareTwoOperandsTypes($1,$3))errorOperandsTypeMismatch(); $$=createNewExprNode(sme,2,$1,$3); if($$!=NULL){generateQuad("SM_EQ",$1,$3,$$); cout << "SM_EQ " <<endl; }} 
 	;
 
 compare_opd:
 	INT {$$=createNewValueNode(NewNodeInt($1));}|
-	INT_ID { 
-		map<char*,SymRec>::iterator it=mainScope.lookup($1);
-		if(!mainScope.checkIteratorAtEnd(it)){
-			$$=createNewIdNode($1); 
-			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
-			updateSymbolRecordUsed($1);
-		} 
-		else {$$=NULL; errorDoesntExist($1);}  }|
+	INT_ID { $$=newIdActions($1); }|
 	FLOAT {$$=createNewValueNode(NewNodeFloat($1)); } |
-	FLOAT_ID { 
-		map<char*,SymRec>::iterator it=mainScope.lookup($1);
-		if(!mainScope.checkIteratorAtEnd(it)){
-			$$=createNewIdNode($1); 
-			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
-			updateSymbolRecordUsed($1);
-		} 
-		else {$$=NULL; errorDoesntExist($1);}  }|
+	FLOAT_ID { $$=newIdActions($1); }|
 	STRING {$$=createNewValueNode(NewNodeString($1));}|
-	STR_ID { 
-		map<char*,SymRec>::iterator it=mainScope.lookup($1);
-		if(!mainScope.checkIteratorAtEnd(it)){
-			$$=createNewIdNode($1); 
-			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
-			updateSymbolRecordUsed($1);
-		} 
-		else {$$=NULL; errorDoesntExist($1);}  }
+	STR_ID { $$=newIdActions($1);}
 	; 
-
 	
 switch_case:	
-	start_switch '(' id ')' '{' case_stmts defaultt '}' {
+	start_switch '(' id ')' '{' endls case_stmts defaultt '}' {
 		outLabel(switchLabels.top());
 		switchLabels.pop();
 		if(!switchIds.empty()) switchIds.pop();
-	};
+	} endls
+////handle syntax errors 	
+	| start_switch  error '}' { cout<<"At Line: "<<line_num<<" expected '(' in SWITCH statement !"<<endl; switchLabels.pop();} endls 
+	| start_switch '(' error '}' { cout<<"At Line: "<<line_num<<" not a valid identifier in SWITCH statement !"<<endl; switchLabels.pop();} endls 
+	| start_switch '(' id error '}' { cout<<"At Line: "<<line_num<<" expected '(' after identifier in SWITCH statement !"<<endl; switchLabels.pop();} endls 
+	| start_switch '(' id ')' error '}' { cout<<"At Line: "<<line_num<<" expected '{' after (identifier)  in SWITCH statement !"<<endl;switchLabels.pop();} endls 
+	| start_switch '(' id ')' '{' endls error '}' { cout<<"At Line: "<<line_num<<" error in cases of in SWITCH statement !"<<endl;switchLabels.pop();} endls 
+	;
+
 	
 start_switch:
 	SWITCH {
 		int label = generateOneLabel();
 		switchLabels.push(label);
-		cout<<"ok start switch";
 	};
 
 id:
-	INT_ID { 
-		map<char*,SymRec>::iterator it=mainScope.lookup($1);
-		if(!mainScope.checkIteratorAtEnd(it)){
-			$$=createNewIdNode($1); 
-			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
-			updateSymbolRecordUsed($1);
-		} 
-		else {$$=NULL; errorDoesntExist($1);}  }
-	| FLOAT_ID  { 
-		map<char*,SymRec>::iterator it=mainScope.lookup($1);
-		if(!mainScope.checkIteratorAtEnd(it)){
-			$$=createNewIdNode($1); 
-			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
-			updateSymbolRecordUsed($1);
-		} 
-		else {$$=NULL; errorDoesntExist($1);} }
-	| STR_ID  { 
-		map<char*,SymRec>::iterator it=mainScope.lookup($1);
-		if(!mainScope.checkIteratorAtEnd(it)){
-			$$=createNewIdNode($1); 
-			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
-			updateSymbolRecordUsed($1);
-		} 
-		else {$$=NULL; errorDoesntExist($1);} }
-		
-	| BOOL_ID  { 
-		map<char*,SymRec>::iterator it=mainScope.lookup($1);
-		if(!mainScope.checkIteratorAtEnd(it)){
-			$$=createNewIdNode($1); 
-			if(!mainScope.checkIteratorInit(it)) unInit.push($1);
-			updateSymbolRecordUsed($1);
-		} 
-		else {$$=NULL; errorDoesntExist($1);} }
+	INT_ID { $$=newIdActions($1); switchIds.push($$);}
+	| FLOAT_ID  { $$=newIdActions($1); switchIds.push($$);}
+	| STR_ID  { $$=newIdActions($1); switchIds.push($$);}	
+	| BOOL_ID  { $$=newIdActions($1);switchIds.push($$); }
 	;
-	
+
 case_stmts:
 	case_stmt case_stmts |
 	case_stmt
 	;
 	
 case_stmt:
-	CASE value ':' {
+	CASE value ':'  {
 			int l=generateOneLabel();
 			brLabels.push(l);
-			if(!switchIds.empty()){
-				NodeWithType* vv=createNewExprNode(eq,2,switchIds.top(),$2); 
-				if(vv!=NULL){
-					generateQuad("EQ",switchIds.top(),$2,vv);
-					generateBranchQuad("JFALSE",brLabels.top(),vv);
+			//check if value type is the same with id
+			if(getIdTypeForId(switchIds.top()) == $2->node->val->tp ) {
+				if(!switchIds.empty()){
+					NodeWithType* vv=createNewExprNode(eq,2,switchIds.top(),$2); 
+					if(vv!=NULL){
+						generateQuad("EQ",switchIds.top(),$2,vv);
+						generateBranchQuad("JFALSE",brLabels.top(),vv);
+					}
 				}
 			}
+			else errorTypeMismatch();
 		}
-		stmt done 
+		endls stmt done 
 	;
 	
 done:
-	DONE ';' {
+	DONE ';' endls {
 		generateBranchQuad("JMP",switchLabels.top(),NULL);
 		outLabel(brLabels.top());
 		brLabels.pop();
 	};
 	
 defaultt:	
-	DEFAULT ':' stmt {cout<<"ok def switch";};
-	
+	DEFAULT ':' endls stmt;
+
 value:
 	INT {$$=createNewValueNode(NewNodeInt($1)); }
 	| FLOAT {$$=createNewValueNode(NewNodeFloat($1)); }
 	| STRING {$$=createNewValueNode(NewNodeString($1)); }
-	| boolean //{$$=createNewValueNode(NewNodeBool($1)); }
+	| boolean 
 	;
 	
-	
 boolean:
-	TRUE { $$=createNewValueNode(NewNodeBool($1)); /*cout<<"bool value"<<endl;*/ } | 
-	FALSE { $$=createNewValueNode(NewNodeBool($1)); /*cout<<"bool value"<<endl;*/ } ;
+	TRUE { $$=createNewValueNode(NewNodeBool(true)); } | 
+	FALSE { $$=createNewValueNode(NewNodeBool(false)); } 
+	;
 
 endls:
 	endls ENDL
@@ -582,6 +531,21 @@ void assignmentActions(char * id, NodeWithType* expr, IdType typ ){
 		else errorConstNotVar(id);
 	}
 	else errorDoesntExist(id);
+}
+
+IdType getIdTypeForId(NodeWithType* n){
+	char* name= n->node->id;
+	if(name[0]=='i') return integer;
+	else if(name[0]=='f') return floatt;
+	else if(name[0]=='b') return boolean;
+	else if(name[0]=='s') return str;
+}
+IdType getIdTypeForUnknownNode(NodeWithType* n){
+	if(n->tp==identifier) return getIdTypeForId(n);
+	else return n->node->val->tp;
+}
+bool compareTwoOperandsTypes(NodeWithType* op1, NodeWithType* op2){
+	return getIdTypeForUnknownNode(op1)==getIdTypeForUnknownNode(op2);
 }
 
 void outValue(ValueWithType * vt){
@@ -681,6 +645,14 @@ void errorVarStmt(){
 
 void errorConstStmt(){
 	cout<<"At Line: "<<line_num<<" Not a valid const statement to declare !"<<endl;	
+}
+
+void errorTypeMismatch(){
+	cout<<"At Line: "<<line_num<<" mismatch type between value and identifier  !"<<endl;	
+}
+
+void errorOperandsTypeMismatch(){
+	cout<<"At Line: "<<line_num<<" mismatch type between comparison operands  !"<<endl;	
 }
 
 void printUnUsedVar(){
@@ -783,7 +755,7 @@ NodeWithType * createNewExprNode(oprt op, int n, NodeWithType* oprd1, NodeWithTy
 
 int main(int, char**) {
 	// open a file handle to a particular file:
-	FILE *myfile = fopen("sample1.voo", "r");
+	FILE *myfile = fopen("sample3.voo", "r");
 	// make sure it is valid:
 	if (!myfile) {
 		cout << "I can't open sample.voo!" << endl;

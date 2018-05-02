@@ -62,3 +62,5 @@ repeat {
 }until(f_o=i_e );
 
 i_ll=5*i_l;
+
+$$$$.+\n 	{cout<<"At Line : "<< line_num<<" Unknown token!"<<endl; ++line_num;} 

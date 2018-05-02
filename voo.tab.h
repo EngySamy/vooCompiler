@@ -63,19 +63,20 @@
      BITWISE_SHIFT_RIGHT = 279,
      POW = 280,
      LOGIC_NOT = 281,
-     IF = 282,
-     ELSE = 283,
-     FOR = 284,
-     WHILE = 285,
-     SWITCH = 286,
-     CASE = 287,
-     REPEAT = 288,
-     UNTIL = 289,
-     DEFAULT = 290,
-     DONE = 291,
-     ENDL = 292,
-     START_DECL = 293,
-     END_DECL = 294
+     UMINUS = 282,
+     IF = 283,
+     ELSE = 284,
+     FOR = 285,
+     WHILE = 286,
+     SWITCH = 287,
+     CASE = 288,
+     REPEAT = 289,
+     UNTIL = 290,
+     DEFAULT = 291,
+     DONE = 292,
+     ENDL = 293,
+     START_DECL = 294,
+     END_DECL = 295
    };
 #endif
 
@@ -86,7 +87,7 @@ typedef union YYSTYPE
 {
 
 /* Line 1676 of yacc.c  */
-#line 74 "voo.y"
+#line 80 "voo.y"
 
 	int ival;
 	float fval;
@@ -98,7 +99,7 @@ typedef union YYSTYPE
 
 
 /* Line 1676 of yacc.c  */
-#line 102 "voo.tab.h"
+#line 103 "voo.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

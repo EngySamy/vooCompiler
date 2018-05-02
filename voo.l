@@ -23,6 +23,7 @@ int line_num = 1;
 
 "<<"		{return BITWISE_SHIFT_LEFT;}
 ">>"		{return BITWISE_SHIFT_RIGHT;}
+"**"		{return POW;}
 
 ">="		{return GR_EQ;}
 ">"			{return GR;}
