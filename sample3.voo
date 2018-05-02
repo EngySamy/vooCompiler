@@ -28,17 +28,16 @@ for (i_o=5 , i_o<= i_x1  ){
 
 f_x1=i_x1**2.0;
 
-if(s_k1==s_k2){
+if (s_k1== s_k2){
 	i_o=i_o+2;
-}
-else if(b_c1){
+}else if(b_c1){
 	i_o=i_o+66;
-}
-else if(s_k1 != s_k3){
+}else if(s_k1 != s_k3){
 	i_o=i_o/66;
-}
-else {
+}else {
 	i_o=i_o-66;
 }
 
-$$ todo  : if stat , boolean ......done: syntax :while , repeat ,switch , for .... type checking in switch cases & in bool expr 
+repeat {
+	i_x2=i_x1--2;
+}until(b_c1);  

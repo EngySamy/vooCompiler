@@ -259,13 +259,13 @@ str_expr:
 	;
 
 if_else_if_else_stmt:
-	if_stmt1 else_if_stmt {
+	if_stmt1 else_if_stmt endls {
 		outLabel(ifElseLabels.top());  //label after the else stat
 		ifElseLabels.pop();	
 	};
 
 if_stmt1:
-	IF start_while_if bool_expr end_while_if '{' stmt '}' { 
+	IF start_while_if bool_expr end_while_if '{' endls stmt '}' { 
 		cout << "if " <<endl;
 		int temp =brLabels.top();
 		brLabels.pop();
@@ -274,11 +274,18 @@ if_stmt1:
 		generateBranchQuad("JMP",label,NULL);
 		outLabel(temp);
 		brLabels.pop();	
-		}
+	}
+	//handle syntax error
+	| IF error '}' {cout<<"At Line: "<<line_num<<" expected '(' after 'if' !"<<endl; YYABORT ;} 
+	| IF start_while_if error '}' { cout<<"At Line: "<<line_num<<" error in boolean expression of if statement !"<<endl; YYABORT; if(!boolRes.empty()) boolRes.pop();}  
+	| IF start_while_if bool_expr error '}' { cout<<"At Line: "<<line_num<<" expected ')' after boolean expression of if statement !"<<endl; YYABORT ; if(!boolRes.empty()) boolRes.pop();}  
+	| IF start_while_if bool_expr end_while_if error '}' { cout<<"At Line: "<<line_num<<" expected '{' after (boolean expression) of if statement !"<<endl; YYABORT ; if(!boolRes.empty()) boolRes.pop();}  
+	| IF start_while_if bool_expr end_while_if '{' endls error '}' { cout<<"At Line: "<<line_num<<" error in statements of if statement !"<<endl; YYABORT ; if(!boolRes.empty()) boolRes.pop();}  
+
 	;
 	
 if_stmt:
-	IF start_while_if bool_expr end_while_if '{' stmt '}' { 
+	IF start_while_if bool_expr end_while_if '{' endls stmt '}' { 
 		cout << "if " <<endl;
 		int temp =brLabels.top();
 		brLabels.pop();
@@ -286,11 +293,19 @@ if_stmt:
 		generateBranchQuad("JMP",label,NULL);
 		outLabel(temp);
 		brLabels.pop();	
-		}
-	;
+	}
+	//handle syntax error
+	| IF error '}' {cout<<"At Line: "<<line_num<<" expected '(' after 'if' !"<<endl; YYABORT ;} 
+	| IF start_while_if  { cout<<"At Line: "<<line_num<<" error in boolean expression of if statement !"<<endl; YYABORT; if(!boolRes.empty()) boolRes.pop();}  error '}'
+	| IF start_while_if bool_expr { cout<<"At Line: "<<line_num<<" expected ')' after boolean expression of if statement !"<<endl; YYABORT ; if(!boolRes.empty()) boolRes.pop();}   error '}' 
+	| IF start_while_if bool_expr end_while_if  { cout<<"At Line: "<<line_num<<" expected '{' after (boolean expression) of if statement !"<<endl; YYABORT ; if(!boolRes.empty()) boolRes.pop();} error '}'  
+	| IF start_while_if bool_expr end_while_if  '{' endls { cout<<"At Line: "<<line_num<<" error in statements of if statement !"<<endl; YYABORT ; if(!boolRes.empty()) boolRes.pop();}  error '}'
+;
 else_if_stmt:
 	ELSE if_stmt else_if_stmt { cout << "else if  " <<endl; } | //sequence of else if 
-	ELSE '{' stmt '}' { cout << "else " <<endl; } | //else 
+	ELSE '{' endls stmt '}'  { cout << "else " <<endl; } | //else
+	//handle errors
+	ELSE  {cout<<"At Line: "<<line_num<<" expected '{' after 'else' !"<<endl;} error '}'
 	{ cout << "epsilon " <<endl; }	//epsilon 
 	;
 	
