@@ -8,18 +8,22 @@ start_decl:
 	var _l;
 	var f_x1;
 	var s_kk;
-	
+	var b_y3;
 end_decl
 
 i_x1 = 10 - i_x3 / 12 + 6;
 i_x4=99;
 
 $$comment
-i_x2=5+7;
+i_x3= i_x2;
+i_x2=5+7.3;
+i_x2=5%7;
+
 s_kk="hghlk*/7651";
 
-f_x1=-7*(9.2+-5)-66/f_x1;
+f_x1=-7*(9.2+-5)-66/i_x2;
 
 f_c1=66;
 
+b_y3 = i_x3 !=i_x2 || f_x1< f_c1 && ! i_x1>i_x3 ;
 

@@ -1,0 +1,88 @@
+start_decl:
+	var i_x1=0;
+	var i_x2;
+
+	var i_x3=55;
+	var i_o;
+	const f_c1=7.0;
+
+	var f_x1=66;
+	var s_k1="a";
+	var s_k2="a";
+	var s_k3="b";
+	var b_c1=true;
+	
+end_decl
+
+while (i_x1 != i_x3){  
+	i_x2=i_x1+2;
+}
+
+while (i_x1 != s_k3){  
+	i_x2=i_x1+2;
+}
+
+f_x1=i_x1**2.0;
+
+
+repeat {
+	i_x2=i_x1--2;
+}until(! s_k2 == s_k3);  
+
+f_x1=f_c1**5.0;
+
+$$try change types in cases
+
+switch (i_x2) {
+	case 5 :  
+		i_x1=8.0;
+		done;
+		
+	case 6:
+		i_x1=9;
+		done;
+		
+	default:
+		i_x1=0;
+}
+
+$$try generate syntax errors to check them 
+for (i_o=5 , i_o<= i_x1  ){ 
+	s_k1="hghlk*/7651";
+	
+} ( i_o=i_o+2 );
+
+f_x1=i_x1**2.0;
+
+if (s_k1== s_k2){
+	i_o=i_o+2;
+};
+
+f_x1=i_x1**2.0;
+
+if (s_k3>= s_k2){
+	i_o=i_o/2;
+}else {
+	i_o=i_o-66;
+};
+
+f_x1=i_x1**2.0;
+
+if (s_k1< s_k2){
+	i_o=i_o-10;
+}else if(b_c1){
+	i_o=i_o+66;
+}else if(s_k1 <= s_k3){
+	i_o=i_o/66;
+}else {
+	i_o=i_o*66;
+};
+
+
+if (s_k1< s_k2){
+	i_o=i_o-10;
+}else if(b_c1){
+	i_o=i_o+66;
+}else if(s_k1 <= s_k3){
+	i_o=i_o/66;
+};

@@ -1,50 +1,14 @@
-0 STO, 0, , i_x1, 
-1 STO, 55, , i_x3, 
-2 STO, 7, , f_c1, 
-3 STO, 66, , f_x1, 
-4 STO, 1 , b_c1, 
-L0: 
-5 NOT_EQ, i_x1, s_k3, t7, 
-6 JFALSE, L1, t7, 
-7 ADD, i_x1, 2, t9, 
-8 STO, t9, , i_x2, 
-9 JMP, L0, , 
-L1: 
-10 POW, i_x1, 2, t12, 
-11 STO, t12, , f_x1, 
-12 STO, 5, , i_o, 
-L2: 
-13 SM_EQ, i_o, i_x1, t17, 
-14 JFALSE, L3, t17, 
-15 ADD, i_o, 2, t19, 
-16 STO, t19, , i_o, 
-17 JMP, L2, , 
-L3: 
-18 POW, i_x1, 2, t22, 
-19 STO, t22, , f_x1, 
-L4: 
-20 EQ, s_k1, s_k2, t26, 
-21 JFALSE, L5, t26, 
-22 ADD, i_o, 2, t28, 
-23 STO, t28, , i_o, 
-24 JMP, L6, , 
-L5: 
-L7: 
-25 JFALSE, L8, b_c1, 
-26 ADD, i_o, 66, t32, 
-27 STO, t32, , i_o, 
-28 JMP, L6, , 
-L8: 
-L9: 
-29 NOT_EQ, s_k1, s_k3, t36, 
-30 JFALSE, L10, t36, 
-31 DIV, i_o, 66, t38, 
-32 STO, t38, , i_o, 
-33 JMP, L6, , 
-L10: 
-L6: 
-L11: 
-34 NEG, 2, , t41, 
-35 SUB, i_x1, t41, t42, 
-36 STO, t42, , i_x2, 
-37 JTRUE, L11, b_c1, 
+0 STO, 55, , i_x3, 
+1 STO, 7, , f_c1, 
+2 DIV, i_x3, 12, t3, 
+3 SUB, 10, t3, t4, 
+4 ADD, t4, 6, t5, 
+5 STO, t5, , i_x1, 
+6 ADD, 5, 7, t7, 
+7 STO, t7, , i_x2, 
+8 NEG, 7, , t9, 
+9 NEG, 5, , t10, 
+10 ADD, 9.2, t10, t11, 
+11 MUL, t9, t11, t12, 
+12 DIV, 66, f_x1, t14, 
+13 SUB, t12, t14, t15, 

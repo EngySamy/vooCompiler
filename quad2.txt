@@ -1,0 +1,117 @@
+0 STO, 0, , i_x1, 
+1 STO, 55, , i_x3, 
+2 STO, 7, , f_c1, 
+3 STO, 66, , f_x1, 
+4 STO, 1 , b_c1, 
+L0: 
+5 NOT_EQ, i_x1, i_x3, t7, 
+6 JFALSE, L1, t7, 
+7 ADD, i_x1, 2, t9, 
+8 STO, t9, , i_x2, 
+9 JMP, L0, , 
+L1: 
+L2: 
+10 NOT_EQ, i_x1, s_k3, t13, 
+11 JFALSE, L3, t13, 
+12 ADD, i_x1, 2, t15, 
+13 STO, t15, , i_x2, 
+14 JMP, L2, , 
+L3: 
+15 POW, i_x1, 2, t18, 
+16 STO, t18, , f_x1, 
+L4: 
+17 NEG, 2, , t21, 
+18 SUB, i_x1, t21, t22, 
+19 STO, t22, , i_x2, 
+20 EQ, s_k2, s_k3, t26, 
+21 LOG_NOT, t26, , t27, 
+22 JTRUE, L4, t27, 
+23 POW, f_c1, 5, t29, 
+24 STO, t29, , f_x1, 
+25 EQ, i_x2, 5, t32, 
+26 JFALSE, L6, t32, 
+27 JMP, L5, , 
+L6: 
+28 EQ, i_x2, 6, t33, 
+29 JFALSE, L7, t33, 
+30 STO, 9, , i_x1, 
+31 JMP, L5, , 
+L7: 
+32 STO, 0, , i_x1, 
+L5: 
+33 STO, 5, , i_o, 
+L8: 
+34 SM_EQ, i_o, i_x1, t39, 
+35 JFALSE, L9, t39, 
+36 ADD, i_o, 2, t41, 
+37 STO, t41, , i_o, 
+38 JMP, L8, , 
+L9: 
+39 POW, i_x1, 2, t44, 
+40 STO, t44, , f_x1, 
+L10: 
+41 EQ, s_k1, s_k2, t48, 
+42 JFALSE, L11, t48, 
+43 ADD, i_o, 2, t50, 
+44 STO, t50, , i_o, 
+45 JMP, L12, , 
+L11: 
+L12: 
+46 POW, i_x1, 2, t53, 
+47 STO, t53, , f_x1, 
+L13: 
+48 GR_EQ, s_k3, s_k2, t57, 
+49 JFALSE, L14, t57, 
+50 DIV, i_o, 2, t59, 
+51 STO, t59, , i_o, 
+52 JMP, L15, , 
+L14: 
+53 SUB, i_o, 66, t62, 
+54 STO, t62, , i_o, 
+L15: 
+55 POW, i_x1, 2, t65, 
+56 STO, t65, , f_x1, 
+L16: 
+57 SM, s_k1, s_k2, t69, 
+58 JFALSE, L17, t69, 
+59 SUB, i_o, 10, t71, 
+60 STO, t71, , i_o, 
+61 JMP, L18, , 
+L17: 
+L19: 
+62 JFALSE, L20, b_c1, 
+63 ADD, i_o, 66, t75, 
+64 STO, t75, , i_o, 
+65 JMP, L18, , 
+L20: 
+L21: 
+66 SM_EQ, s_k1, s_k3, t79, 
+67 JFALSE, L22, t79, 
+68 DIV, i_o, 66, t81, 
+69 STO, t81, , i_o, 
+70 JMP, L18, , 
+L22: 
+71 MUL, i_o, 66, t84, 
+72 STO, t84, , i_o, 
+L18: 
+L23: 
+73 SM, s_k1, s_k2, t88, 
+74 JFALSE, L24, t88, 
+75 SUB, i_o, 10, t90, 
+76 STO, t90, , i_o, 
+77 JMP, L25, , 
+L24: 
+L26: 
+78 JFALSE, L27, b_c1, 
+79 ADD, i_o, 66, t94, 
+80 STO, t94, , i_o, 
+81 JMP, L25, , 
+L27: 
+L28: 
+82 SM_EQ, s_k1, s_k3, t98, 
+83 JFALSE, L29, t98, 
+84 DIV, i_o, 66, t100, 
+85 STO, t100, , i_o, 
+86 JMP, L25, , 
+L29: 
+L25: 
